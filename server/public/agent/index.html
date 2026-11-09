@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>iBangKF 爱邦客在线客服工作台 (Windows Client)</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <!-- 顶部状态栏 -->
+  <header class="top-navbar">
+    <div class="brand-title">
+      <span class="logo-badge">iBangKF</span>
+      <span>爱邦客客服坐席端</span>
+    </div>
+    
+    <div class="agent-status-panel">
+      <div class="stats-badge-group">
+        <div class="stat-item">全站访客: <span id="statVisitorsCount">0</span> 人</div>
+        <div class="stat-item">当前接待: <span id="statActiveChats">0</span> 场</div>
+      </div>
+
+      <button class="sound-toggle-btn active" id="btnSoundToggle" title="开启/关闭提示音">
+        <span id="soundIcon">🔔</span>
+        <span id="soundText">声音开启</span>
+      </button>
+
+      <select class="status-dropdown" id="agentStatusSelect">
+        <option value="online">🟢 在线接待</option>
+        <option value="busy">🟡 忙碌状态</option>
+        <option value="away">⚪ 暂离离开</option>
+      </select>
+
+      <div style="display: flex; align-items: center; gap: 8px;">
+        <span id="currentAgentName" style="font-size: 13.5px; font-weight: 500;">未登录</span>
+        <button id="btnLogout" style="background: none; border: 1px solid #475569; color: #94a3b8; padding: 2px 8px; border-radius: 4px; font-size: 12px; cursor: pointer;">退出</button>
+      </div>
+    </div>
+  </header>
+
+  <!-- 工作台主体三栏 -->
+  <main class="workbench-main">
+
+    <!-- 左侧导航列表 (对话列表 / 访客雷达 / 历史 / 留言) -->
+    <section class="sidebar-left">
+      <div class="sidebar-tabs">
+        <div class="sidebar-tab active" data-tab="activeChats" id="tabActiveChats">
+          当前对话 <span class="badge-count" id="badgeActiveCount">0</span>
+        </div>
+        <div class="sidebar-tab" data-tab="visitorRadar" id="tabVisitorRadar">
+          访客监控 <span class="badge-count" id="badgeRadarCount">0</span>
+        </div>
+        <div class="sidebar-tab" data-tab="offlineMsgs" id="tabOfflineMsgs">
+          留言板
+        </div>
+        <div class="sidebar-tab" data-tab="historyChats" id="tabHistoryChats">
+          历史记录
+        </div>
+      </div>
+
+      <div class="tab-content-container" id="tabContentList">
+        <!-- 动态渲染列表项 -->
+      </div>
+    </section>
+
+    <!-- 中间主对话窗口 -->
+    <section class="chat-center" id="chatCenter">
+      <div class="chat-topbar">
+        <div class="visitor-header-info">
+          <div class="vh-name" id="currentChatVisitorName">请在左侧选择访客进行接待</div>
+          <div class="vh-tags" id="currentChatVisitorTags"></div>
+        </div>
+        <div class="vh-actions" id="chatTopActions" style="display: none;">
+          <button class="btn-action-sm" id="btnTransfer">转接坐席</button>
+          <button class="btn-action-sm btn-action-danger" id="btnEndChat">结束会话</button>
+        </div>
+      </div>
+
+      <!-- 消息流动展示区 -->
+      <div class="messages-flow" id="messagesFlow">
+        <div style="text-align: center; color: #94a3b8; margin-top: 150px;">
+          <p style="font-size: 16px; margin-bottom: 8px;">👋 欢迎使用爱邦客在线客服工作台</p>
+          <p style="font-size: 13px;">请在左侧列表选中对话，或在“访客监控”中主动邀请网站访客发起沟通。</p>
+        </div>
+      </div>
+
+      <!-- 杀手级特性：访客打字预知横条 (Typing Preview Bar) -->
+      <div class="typing-preview-bar" id="typingPreviewBar">
+        <div class="pulse-dot"></div>
+        <span><strong>访客正在输入：</strong></span>
+        <span class="typing-preview-content" id="typingPreviewText">正在打字...</span>
+      </div>
+
+      <!-- 底部编辑与工具区 -->
+      <div class="chat-editor-panel" id="chatEditorPanel" style="display: none;">
+        <div class="editor-toolbar">
+          <button class="tool-icon-btn" id="btnInsertEmoji">😊 表情</button>
+          <label class="tool-icon-btn" style="cursor: pointer;">
+            📷 图片
+            <input type="file" id="clientImageUpload" accept="image/*" style="display: none;">
+          </label>
+          <button class="tool-icon-btn" id="btnClearScreen">🧹 清屏</button>
+        </div>
+
+        <textarea class="editor-textarea" id="agentInputBox" placeholder="输入回复内容，Enter 发送，Ctrl+Enter 换行..."></textarea>
+
+        <div class="editor-bottom-bar">
+          <span class="keyboard-hint">按 Enter 键快速发送消息</span>
+          <button class="btn-send-message" id="btnAgentSend">发送 (Enter)</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- 右侧：访客全景画像与快捷话术库 -->
+    <section class="sidebar-right">
+      <div class="right-tabs">
+        <div class="right-tab active" data-rtab="profile" id="tabProfile">访客画像</div>
+        <div class="right-tab" data-rtab="canned" id="tabCanned">常用话术</div>
+      </div>
+
+      <div class="right-content" id="rightContentPanel">
+        <!-- 默认展示访客画像与轨迹 -->
+        <div id="panelProfile">
+          <div class="profile-group">
+            <div class="profile-title">基本信息</div>
+            <div class="profile-row"><span class="profile-label">访客名称</span><span class="profile-value" id="vpName">-</span></div>
+            <div class="profile-row"><span class="profile-label">IP 地址</span><span class="profile-value" id="vpIp">-</span></div>
+            <div class="profile-row"><span class="profile-label">地理位置</span><span class="profile-value" id="vpCity">-</span></div>
+            <div class="profile-row"><span class="profile-label">接入时间</span><span class="profile-value" id="vpTime">-</span></div>
+          </div>
+
+          <div class="profile-group">
+            <div class="profile-title">来源与环境</div>
+            <div class="profile-row"><span class="profile-label">引荐来源</span><span class="profile-value" id="vpReferrer">-</span></div>
+            <div class="profile-row"><span class="profile-label">搜索词</span><span class="profile-value" id="vpSearch">-</span></div>
+            <div class="profile-row"><span class="profile-label">当前网页</span><span class="profile-value" id="vpPage">-</span></div>
+            <div class="profile-row"><span class="profile-label">浏览器/设备</span><span class="profile-value" id="vpAgent">-</span></div>
+          </div>
+
+          <div class="profile-group">
+            <div class="profile-title">浏览轨迹追踪</div>
+            <div class="track-timeline" id="vpTimeline">
+              <div style="font-size: 12px; color: #94a3b8;">暂无轨迹数据</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 常用快捷话术面板 -->
+        <div id="panelCanned" style="display: none;">
+          <div style="margin-bottom: 10px; display: flex; gap: 6px;">
+            <input type="text" id="cannedSearch" placeholder="搜索快捷话术..." style="flex: 1; padding: 6px 8px; border: 1px solid #d9d9d9; border-radius: 4px; font-size: 12px; outline: none;">
+            <button id="btnAddCannedDialog" style="padding: 6px 10px; background: #1890ff; color: #fff; border: none; border-radius: 4px; font-size: 12px; cursor: pointer;">+ 添加</button>
+          </div>
+          <div id="cannedAccordion">
+            <!-- 动态生成话术 -->
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- 登录覆盖层 -->
+  <div class="login-overlay" id="loginOverlay">
+    <div class="login-card">
+      <div class="login-header">
+        <h2>爱邦客客服坐席登录</h2>
+        <p>Windows 桌面工作台 v3.1</p>
+      </div>
+
+      <div class="form-input-group">
+        <label>服务器地址</label>
+        <input type="text" class="form-input-control" id="loginServer" value="http://127.0.0.1:8080">
+      </div>
+
+      <div class="form-input-group">
+        <label>客服工号 / 账号</label>
+        <input type="text" class="form-input-control" id="loginUsername" value="1001" placeholder="默认工号: 1001 或 1002">
+      </div>
+
+      <div class="form-input-group">
+        <label>登录密码</label>
+        <input type="password" class="form-input-control" id="loginPassword" value="123456" placeholder="默认密码: 123456">
+      </div>
+
+      <button class="btn-login-submit" id="btnDoLogin">登 录 工 作 台</button>
+
+      <div style="margin-top: 14px; font-size: 11.5px; color: #94a3b8; text-align: center; line-height: 1.6;">
+        测试工号: <strong>1001</strong> (密码 123456) / <strong>1002</strong> (密码 123456)<br>
+        管理员: <strong>admin</strong> (密码 admin888)
+      </div>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>

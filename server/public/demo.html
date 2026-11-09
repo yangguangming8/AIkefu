@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>某科技集团官方网站 - 产品与解决方案演示</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      color: #333;
+      background-color: #f7fafc;
+      line-height: 1.6;
+    }
+    header {
+      background: #ffffff;
+      border-bottom: 1px solid #e2e8f0;
+      padding: 0 40px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      height: 70px;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+    .logo {
+      font-size: 22px;
+      font-weight: bold;
+      color: #1890ff;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    nav {
+      display: flex;
+      gap: 28px;
+    }
+    nav a {
+      text-decoration: none;
+      color: #4a5568;
+      font-weight: 500;
+      font-size: 15px;
+      cursor: pointer;
+      padding: 8px 12px;
+      border-radius: 6px;
+      transition: all 0.2s;
+    }
+    nav a:hover, nav a.active {
+      color: #1890ff;
+      background: #e6f7ff;
+    }
+    .hero {
+      background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%);
+      color: white;
+      padding: 90px 40px;
+      text-align: center;
+    }
+    .hero h1 { font-size: 42px; margin-bottom: 18px; font-weight: 700; }
+    .hero p { font-size: 18px; max-width: 650px; margin: 0 auto 30px; opacity: 0.9; }
+    .hero .btn-group { display: flex; justify-content: center; gap: 16px; }
+    .btn {
+      padding: 12px 28px;
+      font-size: 16px;
+      font-weight: 600;
+      border-radius: 6px;
+      cursor: pointer;
+      text-decoration: none;
+      border: none;
+      transition: all 0.2s;
+    }
+    .btn-light { background: #ffffff; color: #1e3a8a; }
+    .btn-light:hover { background: #f0f4f8; }
+    .btn-outline { border: 2px solid #ffffff; background: transparent; color: #fff; }
+    .btn-outline:hover { background: rgba(255,255,255,0.1); }
+    
+    .container {
+      max-width: 1200px;
+      margin: 60px auto;
+      padding: 0 24px;
+    }
+    .section-title {
+      text-align: center;
+      font-size: 30px;
+      margin-bottom: 40px;
+      color: #1a202c;
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+      gap: 30px;
+    }
+    .card {
+      background: white;
+      padding: 30px;
+      border-radius: 12px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+      border: 1px solid #edf2f7;
+      transition: transform 0.2s;
+    }
+    .card:hover { transform: translateY(-4px); }
+    .card h3 { font-size: 20px; margin-bottom: 12px; color: #2d3748; }
+    .card p { color: #718096; font-size: 14.5px; }
+
+    .notice-box {
+      background: #eff6ff;
+      border-left: 4px solid #3b82f6;
+      padding: 16px 20px;
+      border-radius: 4px;
+      margin-bottom: 30px;
+      font-size: 14px;
+      color: #1e40af;
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <div class="logo">
+      <span>⚡ 智邦云端科技</span>
+    </div>
+    <nav>
+      <a class="active" onclick="switchPage('首页', '/home')">网站首页</a>
+      <a onclick="switchPage('企业级云平台方案', '/solution')">解决方案</a>
+      <a onclick="switchPage('全功能定价与版本', '/pricing')">产品定价</a>
+      <a onclick="switchPage('成功客户案例分享', '/cases')">客户案例</a>
+      <a onclick="switchPage('关于我们与团队', '/about')">关于我们</a>
+    </nav>
+  </header>
+
+  <section class="hero">
+    <h1 id="pageHeading">新一代企业全渠道智能客服解决方案</h1>
+    <p id="pageDesc">打通 Web、Windows、移动多端交互，毫秒级访客打字预知与全轨迹追踪，助力企业销售线索转化率翻倍！</p>
+    <div class="btn-group">
+      <button class="btn btn-light" onclick="document.getElementById('ibangkfToggleBtn')?.click()">立即在线咨询</button>
+      <button class="btn btn-outline" onclick="switchPage('全功能定价与版本', '/pricing')">了解定价</button>
+    </div>
+  </section>
+
+  <div class="container">
+    <div class="notice-box">
+      💡 <strong>测试提示：</strong> 当前页面已通过一行代码嵌入 <code>&lt;script src="/widget.js"&gt;&lt;/script&gt;</code>。您点击上方不同导航菜单时，右侧/客服客户端将实时更新您的当前访问轨迹；在右下角咨询窗口中输入文字时，客服端可以无延迟实时预览您正在打的内容！
+    </div>
+
+    <h2 class="section-title">核心业务架构与服务</h2>
+    <div class="grid">
+      <div class="card">
+        <h3>🚀 毫秒级打字预知 (Typing Preview)</h3>
+        <p>独家高能特性：访客在输入框输入但尚未点击发送时，坐席端已提前毫秒级同步预览，提前准备话术应答，秒速回复让客户惊艳！</p>
+      </div>
+      <div class="card">
+        <h3>📍 全流程访客雷达与轨迹追踪</h3>
+        <p>访客从哪个网站搜索跳转而来、搜索了什么词、在哪些页面停留多久，客服工作台一览无余，成单率提升 40% 以上。</p>
+      </div>
+      <div class="card">
+        <h3>💻 专属 Windows 原生客服客户端</h3>
+        <p>提供多窗口会话管理、常用话术分类秒发、新消息系统托盘闪烁、声效提醒，完全胜任高强度在线接待。</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- 模拟多页面跳转 (上报轨迹) -->
+  <script>
+    function switchPage(title, path) {
+      document.title = title + ' - 某科技集团官方网站';
+      document.getElementById('pageHeading').innerText = title;
+      window.history.pushState({}, title, path);
+
+      document.querySelectorAll('nav a').forEach(a => {
+        a.classList.toggle('active', a.innerText.indexOf(title.substring(0, 2)) !== -1);
+      });
+
+      // 向内部 iframe 抛出页面导航事件
+      const iframe = document.getElementById('ibangkfIframe');
+      if (iframe && iframe.contentWindow) {
+        iframe.contentWindow.postMessage({
+          action: 'PAGE_NAVIGATED',
+          payload: { url: window.location.href, title: document.title }
+        }, '*');
+      }
+    }
+  </script>
+
+  <!-- 引入爱邦客访客端挂件 (一行代码即可接入任何网站) -->
+  <script src="/widget.js"></script>
+
+</body>
+</html>

@@ -1,0 +1,658 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>在线咨询</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      background: #f5f7fa;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      font-size: 14px;
+      color: #333;
+    }
+    /* 顶部导航 */
+    .chat-header {
+      background: linear-gradient(135deg, #1890ff 0%, #096dd9 100%);
+      color: #fff;
+      padding: 12px 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+      user-select: none;
+    }
+    .header-left {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .agent-avatar {
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      background: #fff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: bold;
+      color: #1890ff;
+      overflow: hidden;
+    }
+    .agent-avatar img { width: 100%; height: 100%; object-fit: cover; }
+    .agent-meta h3 { font-size: 15px; font-weight: 600; line-height: 1.2; }
+    .agent-meta span { font-size: 11px; opacity: 0.85; }
+    .header-actions { display: flex; gap: 8px; }
+    .icon-btn {
+      background: transparent;
+      border: none;
+      color: #fff;
+      cursor: pointer;
+      padding: 4px;
+      border-radius: 4px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      opacity: 0.85;
+      transition: opacity 0.2s;
+    }
+    .icon-btn:hover { opacity: 1; background: rgba(255,255,255,0.15); }
+
+    /* 消息展示区 */
+    .chat-body {
+      flex: 1;
+      padding: 16px;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      background: #f8fafc;
+    }
+    .msg-time {
+      align-self: center;
+      font-size: 11px;
+      color: #999;
+      margin: 4px 0;
+    }
+    .msg-system {
+      align-self: center;
+      background: #ebeef5;
+      color: #606266;
+      font-size: 12px;
+      padding: 4px 12px;
+      border-radius: 12px;
+      max-width: 85%;
+      text-align: center;
+    }
+    .msg-item {
+      display: flex;
+      gap: 8px;
+      max-width: 85%;
+    }
+    .msg-item.visitor {
+      align-self: flex-end;
+      flex-direction: row-reverse;
+    }
+    .msg-item.agent {
+      align-self: flex-start;
+    }
+    .msg-avatar {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      background: #d9d9d9;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 12px;
+      font-weight: bold;
+      color: #555;
+      flex-shrink: 0;
+    }
+    .msg-item.visitor .msg-avatar {
+      background: #e6f7ff;
+      color: #1890ff;
+    }
+    .msg-bubble {
+      padding: 10px 14px;
+      border-radius: 12px;
+      line-height: 1.5;
+      word-break: break-word;
+      font-size: 13.5px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+    }
+    .msg-item.visitor .msg-bubble {
+      background: #1890ff;
+      color: #fff;
+      border-top-right-radius: 2px;
+    }
+    .msg-item.agent .msg-bubble {
+      background: #fff;
+      color: #262626;
+      border-top-left-radius: 2px;
+      border: 1px solid #e8e8e8;
+    }
+    .msg-bubble img {
+      max-width: 100%;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+
+    /* 打字中指示器 */
+    .typing-indicator {
+      display: none;
+      align-self: flex-start;
+      background: #fff;
+      padding: 8px 12px;
+      border-radius: 12px;
+      border: 1px solid #e8e8e8;
+      font-size: 12px;
+      color: #888;
+      align-items: center;
+      gap: 6px;
+    }
+    .dot-flashing {
+      position: relative;
+      width: 6px;
+      height: 6px;
+      border-radius: 5px;
+      background-color: #1890ff;
+      animation: dot-flashing 1s infinite alternate;
+    }
+    @keyframes dot-flashing {
+      0% { background-color: #1890ff; }
+      50%, 100% { background-color: #bae7ff; }
+    }
+
+    /* 底部输入框 */
+    .chat-footer {
+      background: #fff;
+      border-top: 1px solid #e8e8e8;
+      padding: 10px 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .toolbar {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .tool-btn {
+      background: none;
+      border: none;
+      cursor: pointer;
+      color: #666;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 2px;
+    }
+    .tool-btn:hover { color: #1890ff; }
+    .input-row {
+      display: flex;
+      gap: 8px;
+      align-items: flex-end;
+    }
+    .chat-input {
+      flex: 1;
+      height: 64px;
+      border: 1px solid #d9d9d9;
+      border-radius: 6px;
+      padding: 8px 10px;
+      font-size: 13.5px;
+      resize: none;
+      outline: none;
+      font-family: inherit;
+    }
+    .chat-input:focus { border-color: #1890ff; }
+    .btn-send {
+      height: 36px;
+      padding: 0 16px;
+      background: #1890ff;
+      color: #fff;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-weight: 500;
+      transition: background 0.2s;
+    }
+    .btn-send:hover { background: #40a9ff; }
+
+    /* 表情选择器弹窗 */
+    .emoji-picker {
+      position: absolute;
+      bottom: 95px;
+      left: 14px;
+      background: #fff;
+      border: 1px solid #e8e8e8;
+      border-radius: 8px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+      padding: 10px;
+      display: none;
+      grid-template-columns: repeat(6, 1fr);
+      gap: 8px;
+      font-size: 20px;
+      user-select: none;
+    }
+    .emoji-item {
+      cursor: pointer;
+      text-align: center;
+      padding: 4px;
+      border-radius: 4px;
+    }
+    .emoji-item:hover { background: #f0f0f0; }
+
+    /* 离线留言覆盖层 */
+    .offline-view {
+      position: absolute;
+      top: 60px;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: #fff;
+      padding: 20px;
+      display: none;
+      flex-direction: column;
+      gap: 12px;
+      z-index: 10;
+    }
+    .offline-view h4 { font-size: 16px; color: #1f2937; margin-bottom: 4px; }
+    .offline-view p { font-size: 13px; color: #6b7280; margin-bottom: 8px; }
+    .form-group { display: flex; flex-direction: column; gap: 4px; }
+    .form-group label { font-size: 12px; color: #4b5563; font-weight: 500; }
+    .form-control {
+      padding: 8px 10px;
+      border: 1px solid #d1d5db;
+      border-radius: 4px;
+      font-size: 13px;
+      outline: none;
+    }
+    .form-control:focus { border-color: #1890ff; }
+    textarea.form-control { height: 90px; resize: none; }
+  </style>
+</head>
+<body>
+
+  <!-- 顶部状态栏 -->
+  <div class="chat-header">
+    <div class="header-left">
+      <div class="agent-avatar" id="agentAvatar">客</div>
+      <div class="agent-meta">
+        <h3 id="agentName">爱邦客客服中心</h3>
+        <span id="agentStatusText">正在连接客服坐席...</span>
+      </div>
+    </div>
+    <div class="header-actions">
+      <button class="icon-btn" id="btnMinimize" title="最小化">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+      </button>
+    </div>
+  </div>
+
+  <!-- 消息内容区 -->
+  <div class="chat-body" id="chatBody">
+    <div class="msg-time" id="initTime">刚刚</div>
+    <div class="msg-system">欢迎来到在线客服系统，正在为您接入专业客服坐席...</div>
+  </div>
+
+  <!-- 正在输入提示 -->
+  <div class="typing-indicator" id="typingIndicator">
+    <div class="dot-flashing"></div>
+    <span>客服正在输入...</span>
+  </div>
+
+  <!-- 底部输入栏 -->
+  <div class="chat-footer">
+    <div class="toolbar">
+      <button class="tool-btn" id="btnEmoji" title="表情">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><path d="M8 14s1.5 2 4 2 4-2 4-2"></path><line x1="9" y1="9" x2="9.01" y2="9"></line><line x1="15" y1="9" x2="15.01" y2="9"></line></svg>
+      </button>
+      <label class="tool-btn" title="发送图片" style="cursor: pointer;">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg>
+        <input type="file" id="imageInput" accept="image/*" style="display: none;">
+      </label>
+    </div>
+    <div class="input-row">
+      <textarea class="chat-input" id="chatInput" placeholder="输入您的问题，按 Enter 键发送..."></textarea>
+      <button class="btn-send" id="btnSend">发送</button>
+    </div>
+  </div>
+
+  <!-- 表情弹窗 -->
+  <div class="emoji-picker" id="emojiPicker">
+    <span class="emoji-item">😊</span>
+    <span class="emoji-item">😃</span>
+    <span class="emoji-item">👍</span>
+    <span class="emoji-item">🙏</span>
+    <span class="emoji-item">❤️</span>
+    <span class="emoji-item">🎉</span>
+    <span class="emoji-item">👋</span>
+    <span class="emoji-item">🤝</span>
+    <span class="emoji-item">✨</span>
+    <span class="emoji-item">💡</span>
+    <span class="emoji-item">🔥</span>
+    <span class="emoji-item">💯</span>
+  </div>
+
+  <!-- 离线留言视图 -->
+  <div class="offline-view" id="offlineView">
+    <h4>客服当前不在线</h4>
+    <p>请留下您的联系方式和咨询需求，我们上线后将第一时间答复您！</p>
+    <div class="form-group">
+      <label>您的称呼</label>
+      <input type="text" class="form-control" id="msgName" placeholder="例如：李先生 / 张女士">
+    </div>
+    <div class="form-group">
+      <label>联系电话 / 微信</label>
+      <input type="text" class="form-control" id="msgPhone" placeholder="请输入您的手机号或微信号">
+    </div>
+    <div class="form-group">
+      <label>电子邮箱 (选填)</label>
+      <input type="email" class="form-control" id="msgEmail" placeholder="name@example.com">
+    </div>
+    <div class="form-group">
+      <label>留言内容</label>
+      <textarea class="form-control" id="msgContent" placeholder="请详细描述您的需求..."></textarea>
+    </div>
+    <div style="display: flex; gap: 10px; margin-top: 8px;">
+      <button class="btn-send" id="btnSubmitOffline" style="flex: 1;">提交留言</button>
+      <button class="btn-send" id="btnBackToChat" style="background: #e5e7eb; color: #374151;">返回</button>
+    </div>
+  </div>
+
+  <script>
+    // 解析 URL 参数
+    const urlParams = new URLSearchParams(window.location.search);
+    const referrer = urlParams.get('referrer') || '';
+    const currentPage = urlParams.get('currentPage') || '/';
+    const pageTitle = urlParams.get('pageTitle') || '网站页面';
+    const serverHost = urlParams.get('serverHost') || window.location.origin;
+
+    // 生成或恢复访客唯一标识
+    let visitorId = localStorage.getItem('__IBANGKF_VID__');
+    if (!visitorId) {
+      visitorId = 'v_' + Math.random().toString(36).substring(2, 9);
+      localStorage.setItem('__IBANGKF_VID__', visitorId);
+    }
+
+    let assignedAgentId = null;
+    let ws = null;
+    let typingTimer = null;
+
+    // 初始化 WebSocket 连接
+    const wsProto = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    const wsUrl = `${wsProto}//${window.location.host}`;
+
+    function connect() {
+      ws = new WebSocket(wsUrl);
+
+      ws.onopen = () => {
+        // 上报访客进入
+        ws.send(JSON.stringify({
+          type: 'visitor_enter',
+          data: {
+            visitorId,
+            referrer,
+            currentPage,
+            pageTitle,
+            userAgent: navigator.userAgent
+          }
+        }));
+
+        // 自动呼叫客服
+        ws.send(JSON.stringify({
+          type: 'visitor_call',
+          data: { visitorId }
+        }));
+      };
+
+      ws.onmessage = (event) => {
+        try {
+          const packet = JSON.parse(event.data);
+          handleServerPacket(packet);
+        } catch (e) {
+          console.error(e);
+        }
+      };
+
+      ws.onclose = () => {
+        document.getElementById('agentStatusText').innerText = '连接已断开，3秒后重连...';
+        setTimeout(connect, 3000);
+      };
+    }
+
+    connect();
+
+    // 核心包分发
+    function handleServerPacket(packet) {
+      const { type, data } = packet;
+
+      if (type === 'chat_connected') {
+        assignedAgentId = data.agentId;
+        document.getElementById('agentName').innerText = data.agentName;
+        document.getElementById('agentAvatar').innerText = data.agentName.substring(0, 1);
+        document.getElementById('agentStatusText').innerText = '客服在线，随时为您解答';
+        appendSystemMsg(`客服 ${data.agentName} 为您提供服务`);
+        document.getElementById('offlineView').style.display = 'none';
+      }
+      else if (type === 'no_agent_online') {
+        document.getElementById('agentStatusText').innerText = '客服暂不在线';
+        appendSystemMsg(data.message);
+        document.getElementById('offlineView').style.display = 'flex';
+      }
+      else if (type === 'chat_invited') {
+        // 收到客服主动邀请
+        window.parent.postMessage({
+          action: 'SHOW_INVITE',
+          payload: data
+        }, '*');
+      }
+      else if (type === 'chat_transferred') {
+        assignedAgentId = data.agentId;
+        document.getElementById('agentName').innerText = data.agentName;
+        document.getElementById('agentAvatar').innerText = data.agentName.substring(0, 1);
+        appendSystemMsg(`您的对话已转接至客服：${data.agentName}`);
+      }
+      else if (type === 'chat_message') {
+        appendMessage('agent', data.text, data.msgType, data.fileInfo);
+        // 通知父窗口增加未读气泡
+        window.parent.postMessage({ action: 'NEW_MESSAGE_ALERT' }, '*');
+      }
+      else if (type === 'message_ack') {
+        // 自己发送成功的确认
+      }
+      else if (type === 'chat_ended') {
+        appendSystemMsg(data.message || '客服已结束会话');
+      }
+    }
+
+    // DOM 交互逻辑
+    const chatBody = document.getElementById('chatBody');
+    const chatInput = document.getElementById('chatInput');
+    const btnSend = document.getElementById('btnSend');
+
+    function appendSystemMsg(text) {
+      const div = document.createElement('div');
+      div.className = 'msg-system';
+      div.innerText = text;
+      chatBody.appendChild(div);
+      chatBody.scrollTop = chatBody.scrollHeight;
+    }
+
+    function appendMessage(role, text, msgType = 'text', fileInfo = null) {
+      const row = document.createElement('div');
+      row.className = `msg-item ${role}`;
+
+      const avatar = document.createElement('div');
+      avatar.className = 'msg-avatar';
+      avatar.innerText = role === 'visitor' ? '我' : (document.getElementById('agentName').innerText.substring(0, 1) || '客');
+
+      const bubble = document.createElement('div');
+      bubble.className = 'msg-bubble';
+
+      if (msgType === 'image') {
+        const img = document.createElement('img');
+        img.src = fileInfo ? fileInfo.url : text;
+        img.onclick = () => window.open(img.src, '_blank');
+        bubble.appendChild(img);
+      } else {
+        bubble.innerText = text;
+      }
+
+      row.appendChild(avatar);
+      row.appendChild(bubble);
+      chatBody.appendChild(row);
+      chatBody.scrollTop = chatBody.scrollHeight;
+    }
+
+    function doSendMessage() {
+      const text = chatInput.value.trim();
+      if (!text) return;
+
+      if (!ws || ws.readyState !== WebSocket.OPEN) {
+        alert('正在重新连接，请稍候发送');
+        return;
+      }
+
+      // 立即在界面呈现访客消息
+      appendMessage('visitor', text, 'text');
+
+      // 投递到服务端
+      ws.send(JSON.stringify({
+        type: 'send_message',
+        data: {
+          to: assignedAgentId,
+          text: text,
+          msgType: 'text'
+        }
+      }));
+
+      // 清空输入框并重置打字预知
+      chatInput.value = '';
+      ws.send(JSON.stringify({
+        type: 'visitor_typing_preview',
+        data: { text: '' }
+      }));
+    }
+
+    btnSend.onclick = doSendMessage;
+    chatInput.onkeydown = (e) => {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        doSendMessage();
+      }
+    };
+
+    // 核心特色功能：实时打字预知 (爱邦客核心功能)
+    // 当访客输入文字时，实时推送给客服端，无需按下发送键客服即可预览！
+    chatInput.oninput = () => {
+      const currentText = chatInput.value;
+      if (ws && ws.readyState === WebSocket.OPEN) {
+        ws.send(JSON.stringify({
+          type: 'visitor_typing_preview',
+          data: { text: currentText }
+        }));
+      }
+    };
+
+    // 最小化按钮
+    document.getElementById('btnMinimize').onclick = () => {
+      window.parent.postMessage({ action: 'MINIMIZE' }, '*');
+    };
+
+    // 表情弹窗
+    const emojiPicker = document.getElementById('emojiPicker');
+    document.getElementById('btnEmoji').onclick = () => {
+      emojiPicker.style.display = emojiPicker.style.display === 'grid' ? 'none' : 'grid';
+    };
+    emojiPicker.querySelectorAll('.emoji-item').forEach(item => {
+      item.onclick = () => {
+        chatInput.value += item.innerText;
+        emojiPicker.style.display = 'none';
+        chatInput.focus();
+        chatInput.oninput();
+      };
+    });
+
+    // 图片上传
+    const imageInput = document.getElementById('imageInput');
+    imageInput.onchange = async () => {
+      const file = imageInput.files[0];
+      if (!file) return;
+
+      const formData = new FormData();
+      formData.append('file', file);
+
+      try {
+        const res = await fetch('/api/upload', { method: 'POST', body: formData });
+        const data = await res.json();
+        if (data.code === 0) {
+          appendMessage('visitor', data.data.url, 'image', data.data);
+          ws.send(JSON.stringify({
+            type: 'send_message',
+            data: {
+              to: assignedAgentId,
+              text: data.data.url,
+              msgType: 'image',
+              fileInfo: data.data
+            }
+          }));
+        }
+      } catch (e) {
+        alert('图片上传失败: ' + e.message);
+      }
+      imageInput.value = '';
+    };
+
+    // 离线留言提交
+    document.getElementById('btnSubmitOffline').onclick = async () => {
+      const name = document.getElementById('msgName').value.trim();
+      const phone = document.getElementById('msgPhone').value.trim();
+      const email = document.getElementById('msgEmail').value.trim();
+      const content = document.getElementById('msgContent').value.trim();
+
+      if (!name || !phone || !content) {
+        alert('请填写您的称呼、联系电话和留言内容');
+        return;
+      }
+
+      try {
+        const res = await fetch('/api/offline-msg', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name, phone, email, content, visitorId })
+        });
+        const result = await res.json();
+        alert(result.message || '留言提交成功');
+        document.getElementById('offlineView').style.display = 'none';
+        appendSystemMsg('已收到您的离线留言，我们会尽快联系您！');
+      } catch (e) {
+        alert('留言提交失败: ' + e.message);
+      }
+    };
+
+    document.getElementById('btnBackToChat').onclick = () => {
+      document.getElementById('offlineView').style.display = 'none';
+    };
+
+    // 接收来自外部主网页的导航轨迹消息
+    window.addEventListener('message', (e) => {
+      if (e.data && e.data.action === 'PAGE_NAVIGATED') {
+        const { url, title } = e.data.payload;
+        if (ws && ws.readyState === WebSocket.OPEN) {
+          ws.send(JSON.stringify({
+            type: 'visitor_navigate',
+            data: { pageUrl: url, pageTitle: title }
+          }));
+        }
+      }
+    });
+  </script>
+</body>
+</html>

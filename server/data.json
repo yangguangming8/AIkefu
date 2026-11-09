@@ -1,0 +1,106 @@
+{
+  "agents": [
+    {
+      "id": "1001",
+      "username": "agent01",
+      "name": "小邦（资深客服）",
+      "password": "123456",
+      "avatar": "https://api.dicebear.com/7.x/bottts/svg?seed=agent01",
+      "status": "offline",
+      "maxChats": 10
+    },
+    {
+      "id": "1002",
+      "username": "agent02",
+      "name": "小爱（售后专员）",
+      "password": "123456",
+      "avatar": "https://api.dicebear.com/7.x/bottts/svg?seed=agent02",
+      "status": "offline",
+      "maxChats": 10
+    },
+    {
+      "id": "admin",
+      "username": "admin",
+      "name": "客服主管 (Admin)",
+      "password": "admin888",
+      "avatar": "https://api.dicebear.com/7.x/bottts/svg?seed=admin",
+      "status": "offline",
+      "maxChats": 20
+    }
+  ],
+  "cannedMessages": [
+    {
+      "category": "常用问候",
+      "items": [
+        {
+          "id": "c1",
+          "title": "标准欢迎语",
+          "content": "您好！欢迎访问我们网站，请问有什么可以帮您的？"
+        },
+        {
+          "id": "c2",
+          "title": "节日问候",
+          "content": "您好，祝您工作愉快！请问今天想咨询哪方面的内容？"
+        },
+        {
+          "id": "c3",
+          "title": "主动咨询",
+          "content": "看您关注这个页面很久了，需要我为您做个简短介绍吗？"
+        }
+      ]
+    },
+    {
+      "category": "业务与价格",
+      "items": [
+        {
+          "id": "c4",
+          "title": "产品报价",
+          "content": "我们的企业版支持多坐席接入与自定义配置，当前可享受限时折扣活动。"
+        },
+        {
+          "id": "c5",
+          "title": "试用开通",
+          "content": "您可以留下您的称呼和联系电话，我稍后为您开通免费试用账号。"
+        },
+        {
+          "id": "c6",
+          "title": "部署咨询",
+          "content": "我们支持公有云部署与私有化独立部署，数据完全自主可控。"
+        }
+      ]
+    },
+    {
+      "category": "礼貌等待与转接",
+      "items": [
+        {
+          "id": "c7",
+          "title": "稍等片刻",
+          "content": "请您稍候，我正在为您核查相关资料，大约需要1分钟。"
+        },
+        {
+          "id": "c8",
+          "title": "技术转接",
+          "content": "针对您咨询的高级技术问题，我正在为您转接高级技术工程师，请稍候。"
+        }
+      ]
+    },
+    {
+      "category": "结束语",
+      "items": [
+        {
+          "id": "c9",
+          "title": "标准道别",
+          "content": "感谢您的咨询，如果您还有其他问题，随时联系我们，祝您生活愉快！"
+        },
+        {
+          "id": "c10",
+          "title": "满意度邀请",
+          "content": "本次服务即将结束，若您对我的解答满意，请在窗口右上角为我点个好评，谢谢！"
+        }
+      ]
+    }
+  ],
+  "offlineMessages": [],
+  "blacklist": [],
+  "chatHistory": []
+}
