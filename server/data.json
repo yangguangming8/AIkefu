@@ -192,7 +192,43 @@
       ],
       "tokenDailyUsage": {},
       "offlineMessages": [],
-      "chatHistory": []
+      "chatHistory": [],
+      "blacklist": [
+        {
+          "id": "bl_1794192076859",
+          "ip": "192.168.100.99",
+          "visitorId": "v_bad_guy_001",
+          "reason": "恶意刷屏",
+          "createdAt": "2026-11-09T02:41:16.859Z"
+        }
+      ],
+      "ratings": [
+        {
+          "id": "rt_1794192102610",
+          "chatId": "chat_real_123",
+          "visitorId": "v_api_test",
+          "stars": 5,
+          "tags": [
+            "响应非常快"
+          ],
+          "comment": "接口直接打分",
+          "createdAt": "2026-11-09T02:41:42.610Z"
+        },
+        {
+          "id": "rt_1794192076860",
+          "chatId": "chat_test_123",
+          "visitorId": "v_happy_user",
+          "visitorName": "张先生",
+          "agentId": "1001",
+          "stars": 5,
+          "tags": [
+            "响应非常快",
+            "服务态度好"
+          ],
+          "comment": "解决问题很迅速，点赞！",
+          "createdAt": "2026-11-09T02:41:16.860Z"
+        }
+      ]
     },
     {
       "tenantId": "t_1794187967900",

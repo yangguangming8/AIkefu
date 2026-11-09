@@ -22,11 +22,68 @@
     }
   }
 
+  // 1. 搜索引擎来源搜索词提取算法 (支持百度、搜狗、360、Google、Bing)
+  function parseSearchKeyword(ref) {
+    if (!ref) return '无';
+    try {
+      const url = new URL(ref);
+      const host = url.hostname.toLowerCase();
+      const params = url.searchParams;
+
+      // 百度搜索
+      if (host.includes('baidu.com')) {
+        return params.get('wd') || params.get('word') || '无';
+      }
+      // 搜狗搜索
+      if (host.includes('sogou.com')) {
+        return params.get('query') || params.get('keyword') || '无';
+      }
+      // 360好搜
+      if (host.includes('so.com') || host.includes('360.cn')) {
+        return params.get('q') || '无';
+      }
+      // 必应 Bing
+      if (host.includes('bing.com')) {
+        return params.get('q') || '无';
+      }
+      // 谷歌 Google
+      if (host.includes('google.')) {
+        return params.get('q') || '无';
+      }
+    } catch (e) {}
+    return '无';
+  }
+
+  // 2. 访客身份在本地持久化记忆 (解决刷新变新访客与改名问题)
+  function getOrCreateVisitorIdentity() {
+    let vid = '';
+    let vname = '';
+    try {
+      vid = localStorage.getItem('__AIKEFU_VID__');
+      vname = localStorage.getItem('__AIKEFU_VNAME__');
+      if (!vid) {
+        vid = 'v_' + Date.now().toString(36) + Math.random().toString(36).substring(2, 6);
+        localStorage.setItem('__AIKEFU_VID__', vid);
+      }
+      if (!vname) {
+        vname = '访客 ' + Math.random().toString(36).substring(2, 6).toUpperCase();
+        localStorage.setItem('__AIKEFU_VNAME__', vname);
+      }
+    } catch (e) {
+      vid = 'v_' + Math.random().toString(36).substring(2, 9);
+      vname = '访客 ' + Math.random().toString(36).substring(2, 6).toUpperCase();
+    }
+    return { vid, vname };
+  }
+
   function init() {
     if (!document.body) {
       document.addEventListener('DOMContentLoaded', init);
       return;
     }
+
+    const { vid, vname } = getOrCreateVisitorIdentity();
+    const searchWord = parseSearchKeyword(document.referrer);
 
     // 注入样式
     const style = document.createElement('style');
@@ -227,16 +284,18 @@
     iframeWrap.className = 'aikefu-iframe-wrap';
     iframeWrap.id = 'aikefuIframeWrap';
     
-    // 传给 iframe 当前页面参数与租户 appKey
+    // 传给 iframe 当前页面参数与租户 appKey、访客身份、搜索词
     const params = new URLSearchParams({
       referrer: document.referrer || '',
+      searchWord: searchWord,
+      visitorId: vid,
+      visitorName: vname,
       currentPage: window.location.href,
       pageTitle: document.title || '当前网页',
       serverHost: serverHost,
       appKey: appKey
     });
     
-    // 如果当前通过 file:/// 打开，iframe 地址通过 http://127.0.0.1:8080/widget.html 访问
     const iframeSrc = (window.location.protocol === 'file:' ? 'http://127.0.0.1:8080' : serverHost) + `/widget.html?${params.toString()}`;
     iframeWrap.innerHTML = `<iframe id="aikefuIframe" src="${iframeSrc}"></iframe>`;
     document.body.appendChild(iframeWrap);
@@ -288,11 +347,14 @@
         if (!isOpen) {
           badge.style.display = 'flex';
         }
+      } else if (action === 'UPDATE_VISITOR_NAME') {
+        if (payload && payload.name) {
+          try { localStorage.setItem('__AIKEFU_VNAME__', payload.name); } catch (e) {}
+        }
       }
     });
 
-    // 监听浏览器 URL 变化，通知 iframe 轨迹
-    window.addEventListener('popstate', reportNavigation);
+    // 3. SPA 单页应用全捕获 (劫持 pushState / replaceState 并监听 popstate)
     function reportNavigation() {
       const iframe = document.getElementById('aikefuIframe');
       if (iframe && iframe.contentWindow) {
@@ -304,6 +366,26 @@
           }
         }, '*');
       }
+    }
+
+    window.addEventListener('popstate', reportNavigation);
+
+    const originalPushState = history.pushState;
+    if (originalPushState) {
+      history.pushState = function() {
+        const result = originalPushState.apply(this, arguments);
+        setTimeout(reportNavigation, 100);
+        return result;
+      };
+    }
+
+    const originalReplaceState = history.replaceState;
+    if (originalReplaceState) {
+      history.replaceState = function() {
+        const result = originalReplaceState.apply(this, arguments);
+        setTimeout(reportNavigation, 100);
+        return result;
+      };
     }
   }
 

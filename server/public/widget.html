@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>在线咨询</title>
+  <title>在线咨询 - AI智客服</title>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
@@ -118,13 +118,17 @@
       background: #e6f7ff;
       color: #1890ff;
     }
+    .msg-item.agent .msg-avatar {
+      background: #1890ff;
+      color: #fff;
+    }
     .msg-bubble {
       padding: 10px 14px;
-      border-radius: 12px;
-      line-height: 1.5;
-      word-break: break-word;
+      border-radius: 8px;
       font-size: 13.5px;
-      box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+      line-height: 1.5;
+      word-break: break-all;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.05);
     }
     .msg-item.visitor .msg-bubble {
       background: #1890ff;
@@ -133,55 +137,51 @@
     }
     .msg-item.agent .msg-bubble {
       background: #fff;
-      color: #262626;
+      color: #333;
       border-top-left-radius: 2px;
-      border: 1px solid #e8e8e8;
+      border: 1px solid #eef2f6;
     }
     .msg-bubble img {
       max-width: 100%;
-      border-radius: 6px;
+      border-radius: 4px;
       cursor: pointer;
     }
 
-    /* 打字中指示器 */
-    .typing-indicator {
-      display: none;
-      align-self: flex-start;
-      background: #fff;
-      padding: 8px 12px;
-      border-radius: 12px;
-      border: 1px solid #e8e8e8;
+    /* 快捷导航与转接提示 */
+    .chat-banner {
+      background: #f0f7ff;
+      border-bottom: 1px solid #d6e4ff;
+      padding: 6px 14px;
       font-size: 12px;
-      color: #888;
+      color: #096dd9;
+      display: flex;
+      justify-content: space-between;
       align-items: center;
-      gap: 6px;
     }
-    .dot-flashing {
-      position: relative;
-      width: 6px;
-      height: 6px;
-      border-radius: 5px;
-      background-color: #1890ff;
-      animation: dot-flashing 1s infinite alternate;
-    }
-    @keyframes dot-flashing {
-      0% { background-color: #1890ff; }
-      50%, 100% { background-color: #bae7ff; }
+    .chat-banner button {
+      background: #1890ff;
+      color: white;
+      border: none;
+      padding: 3px 8px;
+      border-radius: 4px;
+      font-size: 11px;
+      cursor: pointer;
     }
 
-    /* 底部输入框 */
+    /* 输入栏 */
     .chat-footer {
       background: #fff;
       border-top: 1px solid #e8e8e8;
-      padding: 10px 14px;
       display: flex;
       flex-direction: column;
-      gap: 8px;
     }
     .toolbar {
       display: flex;
       align-items: center;
+      padding: 6px 12px;
       gap: 12px;
+      border-bottom: 1px solid #f0f0f0;
+      color: #666;
     }
     .tool-btn {
       background: none;
@@ -190,182 +190,312 @@
       color: #666;
       display: flex;
       align-items: center;
-      justify-content: center;
       padding: 2px;
+      border-radius: 4px;
     }
     .tool-btn:hover { color: #1890ff; }
-    .input-row {
+    .input-wrap {
       display: flex;
+      padding: 8px 12px 10px;
       gap: 8px;
-      align-items: flex-end;
     }
     .chat-input {
       flex: 1;
-      height: 64px;
+      height: 40px;
       border: 1px solid #d9d9d9;
       border-radius: 6px;
-      padding: 8px 10px;
+      padding: 8px 12px;
+      outline: none;
       font-size: 13.5px;
       resize: none;
-      outline: none;
-      font-family: inherit;
+      transition: border-color 0.2s;
     }
     .chat-input:focus { border-color: #1890ff; }
     .btn-send {
-      height: 36px;
-      padding: 0 16px;
       background: #1890ff;
       color: #fff;
       border: none;
-      border-radius: 4px;
+      padding: 0 16px;
+      border-radius: 6px;
       cursor: pointer;
       font-weight: 500;
       transition: background 0.2s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
     }
-    .btn-send:hover { background: #40a9ff; }
+    .btn-send:hover { background: #096dd9; }
 
-    /* 表情选择器弹窗 */
+    /* 表情选择面板 */
     .emoji-picker {
-      position: absolute;
-      bottom: 95px;
-      left: 14px;
-      background: #fff;
-      border: 1px solid #e8e8e8;
-      border-radius: 8px;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-      padding: 10px;
       display: none;
-      grid-template-columns: repeat(6, 1fr);
-      gap: 8px;
-      font-size: 20px;
-      user-select: none;
+      grid-template-columns: repeat(8, 1fr);
+      gap: 6px;
+      padding: 10px;
+      background: #fff;
+      border-top: 1px solid #eee;
+      max-height: 120px;
+      overflow-y: auto;
     }
     .emoji-item {
-      cursor: pointer;
+      font-size: 18px;
       text-align: center;
+      cursor: pointer;
       padding: 4px;
       border-radius: 4px;
     }
     .emoji-item:hover { background: #f0f0f0; }
 
-    /* 离线留言覆盖层 */
-    .offline-view {
+    /* 离线留言界面 */
+    .offline-form {
+      display: none;
       position: absolute;
-      top: 60px;
+      top: 50px;
+      bottom: 0;
       left: 0;
       right: 0;
-      bottom: 0;
       background: #fff;
+      z-index: 10;
       padding: 20px;
-      display: none;
       flex-direction: column;
       gap: 12px;
-      z-index: 10;
     }
-    .offline-view h4 { font-size: 16px; color: #1f2937; margin-bottom: 4px; }
-    .offline-view p { font-size: 13px; color: #6b7280; margin-bottom: 8px; }
+    .offline-form h4 { font-size: 16px; margin-bottom: 4px; color: #1e293b; }
+    .offline-form p { font-size: 12px; color: #64748b; margin-bottom: 8px; }
     .form-group { display: flex; flex-direction: column; gap: 4px; }
-    .form-group label { font-size: 12px; color: #4b5563; font-weight: 500; }
-    .form-control {
+    .form-group label { font-size: 12px; font-weight: 600; color: #475569; }
+    .form-group input, .form-group textarea {
       padding: 8px 10px;
-      border: 1px solid #d1d5db;
+      border: 1px solid #cbd5e1;
       border-radius: 4px;
       font-size: 13px;
       outline: none;
     }
-    .form-control:focus { border-color: #1890ff; }
-    textarea.form-control { height: 90px; resize: none; }
+    .form-group textarea { resize: none; height: 70px; }
+    .form-actions { display: flex; gap: 10px; margin-top: 8px; }
+    .form-actions button {
+      flex: 1;
+      padding: 10px;
+      border-radius: 6px;
+      cursor: pointer;
+      border: none;
+      font-weight: 500;
+    }
+    .btn-submit-offline { background: #1890ff; color: #fff; }
+    .btn-cancel-offline { background: #f1f5f9; color: #475569; }
+
+    /* 满意度评价弹窗 */
+    .rating-modal-mask {
+      display: none;
+      position: absolute;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0,0,0,0.5);
+      z-index: 20;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+    }
+    .rating-card {
+      background: #fff;
+      border-radius: 12px;
+      width: 100%;
+      max-width: 330px;
+      padding: 20px;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+      text-align: center;
+      animation: modalFadeIn 0.25s ease-out;
+    }
+    @keyframes modalFadeIn {
+      from { transform: scale(0.9); opacity: 0; }
+      to { transform: scale(1); opacity: 1; }
+    }
+    .rating-card h3 { font-size: 16px; color: #1e293b; margin-bottom: 4px; }
+    .rating-card p { font-size: 12px; color: #64748b; margin-bottom: 14px; }
+    .stars-wrap {
+      display: flex;
+      justify-content: center;
+      gap: 10px;
+      margin-bottom: 14px;
+    }
+    .star-btn {
+      font-size: 26px;
+      color: #cbd5e1;
+      cursor: pointer;
+      transition: color 0.15s, transform 0.15s;
+    }
+    .star-btn.active { color: #f59e0b; }
+    .star-btn:hover { transform: scale(1.15); }
+    .tag-chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      justify-content: center;
+      margin-bottom: 12px;
+    }
+    .tag-chip {
+      font-size: 11.5px;
+      padding: 4px 10px;
+      border-radius: 14px;
+      background: #f1f5f9;
+      color: #475569;
+      cursor: pointer;
+      border: 1px solid transparent;
+      user-select: none;
+    }
+    .tag-chip.selected {
+      background: #eff6ff;
+      color: #1890ff;
+      border-color: #93c5fd;
+      font-weight: 500;
+    }
+    .rating-comment {
+      width: 100%;
+      height: 60px;
+      padding: 8px 10px;
+      border: 1px solid #e2e8f0;
+      border-radius: 6px;
+      font-size: 12.5px;
+      outline: none;
+      resize: none;
+      margin-bottom: 14px;
+    }
+    .rating-actions {
+      display: flex;
+      gap: 8px;
+    }
+    .rating-actions button {
+      flex: 1;
+      padding: 8px;
+      border-radius: 6px;
+      font-size: 13px;
+      cursor: pointer;
+      border: none;
+    }
+    .btn-submit-rating { background: #1890ff; color: #fff; font-weight: 600; }
+    .btn-close-rating { background: #f1f5f9; color: #64748b; }
   </style>
 </head>
 <body>
 
-  <!-- 顶部状态栏 -->
+  <!-- 顶部导航 -->
   <div class="chat-header">
     <div class="header-left">
       <div class="agent-avatar" id="agentAvatar">客</div>
       <div class="agent-meta">
-        <h3 id="agentName">AIkefu 客服中心</h3>
-        <span id="agentStatusText">正在连接客服坐席...</span>
+        <h3 id="agentName">在线客服</h3>
+        <span id="agentStatusText">为您服务中...</span>
       </div>
     </div>
     <div class="header-actions">
-      <button class="icon-btn" id="btnRequestHuman" style="font-size: 11.5px; padding: 3px 8px; background: rgba(255,255,255,0.22); border-radius: 12px; gap: 4px; display: inline-flex; align-items: center;" title="呼叫人工客服坐席">
-        <span>👨‍💼 转人工</span>
+      <button class="icon-btn" id="btnOpenRating" title="满意度评价" style="font-size:12px; display:flex; align-items:center; gap:2px;">
+        ⭐评价
       </button>
-      <button class="icon-btn" id="btnMinimize" title="最小化">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+      <button class="icon-btn" id="btnMinimize" title="最小化窗口">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="5" y1="12" x2="19" y2="12"></line>
+        </svg>
       </button>
     </div>
   </div>
 
-  <!-- 消息内容区 -->
-  <div class="chat-body" id="chatBody">
-    <div class="msg-time" id="initTime">刚刚</div>
-    <div class="msg-system">欢迎来到在线客服系统，正在为您接入专业客服坐席...</div>
+  <!-- 横幅提示 -->
+  <div class="chat-banner" id="chatBanner">
+    <span>💡 如遇疑难问题，可一键为您转接真人客服</span>
+    <button id="btnRequestHuman">转人工</button>
   </div>
 
-  <!-- 正在输入提示 -->
-  <div class="typing-indicator" id="typingIndicator">
-    <div class="dot-flashing"></div>
-    <span>客服正在输入...</span>
+  <!-- 消息展示区 -->
+  <div class="chat-body" id="chatBody">
+    <div class="msg-time" id="initTime">刚刚</div>
+  </div>
+
+  <!-- 表情面板 -->
+  <div class="emoji-picker" id="emojiPicker">
+    <span class="emoji-item">😊</span><span class="emoji-item">👍</span><span class="emoji-item">❤️</span><span class="emoji-item">😄</span>
+    <span class="emoji-item">🎉</span><span class="emoji-item">🤝</span><span class="emoji-item">🙏</span><span class="emoji-item">🌹</span>
+    <span class="emoji-item">👏</span><span class="emoji-item">💡</span><span class="emoji-item">🔥</span><span class="emoji-item">👌</span>
+    <span class="emoji-item">⭐</span><span class="emoji-item">😎</span><span class="emoji-item">🙌</span><span class="emoji-item">☕</span>
   </div>
 
   <!-- 底部输入栏 -->
   <div class="chat-footer">
     <div class="toolbar">
       <button class="tool-btn" id="btnEmoji" title="表情">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><path d="M8 14s1.5 2 4 2 4-2 4-2"></path><line x1="9" y1="9" x2="9.01" y2="9"></line><line x1="15" y1="9" x2="15.01" y2="9"></line></svg>
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="10"></circle>
+          <path d="M8 14s1.5 2 4 2 4-2 4-2"></path>
+          <line x1="9" y1="9" x2="9.01" y2="9"></line>
+          <line x1="15" y1="9" x2="15.01" y2="9"></line>
+        </svg>
       </button>
       <label class="tool-btn" title="发送图片" style="cursor: pointer;">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg>
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+          <circle cx="8.5" cy="8.5" r="1.5"></circle>
+          <polyline points="21 15 16 10 5 21"></polyline>
+        </svg>
         <input type="file" id="imageInput" accept="image/*" style="display: none;">
       </label>
     </div>
-    <div class="input-row">
-      <textarea class="chat-input" id="chatInput" placeholder="输入您的问题，按 Enter 键发送..."></textarea>
+    <div class="input-wrap">
+      <input type="text" class="chat-input" id="chatInput" placeholder="请输入您的问题，Enter发送..." maxlength="500">
       <button class="btn-send" id="btnSend">发送</button>
     </div>
   </div>
 
-  <!-- 表情弹窗 -->
-  <div class="emoji-picker" id="emojiPicker">
-    <span class="emoji-item">😊</span>
-    <span class="emoji-item">😃</span>
-    <span class="emoji-item">👍</span>
-    <span class="emoji-item">🙏</span>
-    <span class="emoji-item">❤️</span>
-    <span class="emoji-item">🎉</span>
-    <span class="emoji-item">👋</span>
-    <span class="emoji-item">🤝</span>
-    <span class="emoji-item">✨</span>
-    <span class="emoji-item">💡</span>
-    <span class="emoji-item">🔥</span>
-    <span class="emoji-item">💯</span>
-  </div>
-
-  <!-- 离线留言视图 -->
-  <div class="offline-view" id="offlineView">
-    <h4>客服当前不在线</h4>
-    <p>请留下您的联系方式和咨询需求，我们上线后将第一时间答复您！</p>
+  <!-- 离线留言界面 -->
+  <div class="offline-form" id="offlineView">
+    <h4>所有客服暂时离线</h4>
+    <p>请留下您的联系方式和咨询事项，我们将第一时间与您取得联系！</p>
     <div class="form-group">
       <label>您的称呼</label>
-      <input type="text" class="form-control" id="msgName" placeholder="例如：李先生 / 张女士">
+      <input type="text" id="msgName" placeholder="如：李先生">
     </div>
     <div class="form-group">
-      <label>联系电话 / 微信</label>
-      <input type="text" class="form-control" id="msgPhone" placeholder="请输入您的手机号或微信号">
+      <label>联系电话</label>
+      <input type="text" id="msgPhone" placeholder="请输入您的手机号码">
     </div>
     <div class="form-group">
       <label>电子邮箱 (选填)</label>
-      <input type="email" class="form-control" id="msgEmail" placeholder="name@example.com">
+      <input type="email" id="msgEmail" placeholder="用于接收详细方案">
     </div>
     <div class="form-group">
       <label>留言内容</label>
-      <textarea class="form-control" id="msgContent" placeholder="请详细描述您的需求..."></textarea>
+      <textarea id="msgContent" placeholder="请详细描述您的咨询或需求..."></textarea>
     </div>
-    <div style="display: flex; gap: 10px; margin-top: 8px;">
-      <button class="btn-send" id="btnSubmitOffline" style="flex: 1;">提交留言</button>
-      <button class="btn-send" id="btnBackToChat" style="background: #e5e7eb; color: #374151;">返回</button>
+    <div class="form-actions">
+      <button class="btn-cancel-offline" id="btnBackToChat">返回聊天</button>
+      <button class="btn-submit-offline" id="btnSubmitOffline">提交留言</button>
+    </div>
+  </div>
+
+  <!-- 5 星满意度打分评价弹窗 -->
+  <div class="rating-modal-mask" id="ratingModal">
+    <div class="rating-card">
+      <h3>服务满意度评价</h3>
+      <p>请对本次客服服务做出评分，帮助我们持续提升</p>
+
+      <div class="stars-wrap" id="starsWrap">
+        <span class="star-btn active" data-star="1">★</span>
+        <span class="star-btn active" data-star="2">★</span>
+        <span class="star-btn active" data-star="3">★</span>
+        <span class="star-btn active" data-star="4">★</span>
+        <span class="star-btn active" data-star="5">★</span>
+      </div>
+
+      <div class="tag-chips" id="ratingTags">
+        <span class="tag-chip selected" data-tag="响应非常快">响应非常快</span>
+        <span class="tag-chip selected" data-tag="解答专业耐心">解答专业耐心</span>
+        <span class="tag-chip" data-tag="问题完全解决">问题完全解决</span>
+        <span class="tag-chip" data-tag="服务态度极佳">服务态度极佳</span>
+      </div>
+
+      <textarea class="rating-comment" id="ratingComment" placeholder="写下您的具体建议或感谢语（选填）..."></textarea>
+
+      <div class="rating-actions">
+        <button class="btn-close-rating" id="btnCloseRating">稍后再评</button>
+        <button class="btn-submit-rating" id="btnSubmitRating">提交评价</button>
+      </div>
     </div>
   </div>
 
@@ -373,21 +503,25 @@
     // 解析 URL 参数
     const urlParams = new URLSearchParams(window.location.search);
     const referrer = urlParams.get('referrer') || '';
-    const currentPage = urlParams.get('currentPage') || '/';
-    const pageTitle = urlParams.get('pageTitle') || '网站页面';
-    const serverHost = urlParams.get('serverHost') || window.location.origin;
+    const searchWord = urlParams.get('searchWord') || '无';
+    const currentPage = urlParams.get('currentPage') || '';
+    const pageTitle = urlParams.get('pageTitle') || '';
+    const serverHost = urlParams.get('serverHost') || '';
     const appKey = urlParams.get('appKey') || 'app_demo888';
 
-    // 生成或恢复访客唯一标识
-    let visitorId = localStorage.getItem('__AIKEFU_VID__');
+    // 访客持久化身份
+    let visitorId = urlParams.get('visitorId') || localStorage.getItem('__AIKEFU_VID__');
     if (!visitorId) {
       visitorId = 'v_' + Math.random().toString(36).substring(2, 9);
       localStorage.setItem('__AIKEFU_VID__', visitorId);
     }
 
+    let visitorName = urlParams.get('visitorName') || localStorage.getItem('__AIKEFU_VNAME__') || ('访客 ' + visitorId.slice(-4));
+
     let assignedAgentId = null;
+    let currentChatId = null;
     let ws = null;
-    let typingTimer = null;
+    let isBlocked = false;
 
     // 初始化 WebSocket 连接
     let targetHost = window.location.host;
@@ -405,6 +539,7 @@
     const wsUrl = `${wsProto}//${targetHost}`;
 
     function connect() {
+      if (isBlocked) return;
       try {
         ws = new WebSocket(wsUrl);
       } catch (err) {
@@ -414,12 +549,14 @@
       }
 
       ws.onopen = () => {
-        // 上报访客进入 (带租户 appKey)
+        // 上报访客进入 (带搜索词、持久化身份与租户 appKey)
         ws.send(JSON.stringify({
           type: 'visitor_enter',
           data: {
             visitorId,
+            name: visitorName,
             referrer,
+            searchWord,
             currentPage,
             pageTitle,
             userAgent: navigator.userAgent,
@@ -427,7 +564,7 @@
           }
         }));
 
-        // 自动呼叫客服 (AI 或人工)
+        // 发起自动呼叫 (AI 或人工客服分配)
         ws.send(JSON.stringify({
           type: 'visitor_call',
           data: { visitorId, appKey }
@@ -444,32 +581,49 @@
       };
 
       ws.onclose = () => {
-        document.getElementById('agentStatusText').innerText = '连接已断开，3秒后重连...';
-        setTimeout(connect, 3000);
+        if (!isBlocked) {
+          document.getElementById('agentStatusText').innerText = '连接已断开，3秒后重连...';
+          setTimeout(connect, 3000);
+        }
       };
     }
 
     connect();
 
-    // 核心包分发
+    // 核心数据包分发
     function handleServerPacket(packet) {
       const { type, data } = packet;
 
       if (type === 'chat_connected') {
         assignedAgentId = data.agentId;
+        currentChatId = data.chatId || ('chat_' + Date.now());
         document.getElementById('agentName').innerText = data.agentName;
         document.getElementById('agentAvatar').innerText = data.agentName.substring(0, 1);
-        document.getElementById('agentStatusText').innerText = '客服在线，随时为您解答';
-        appendSystemMsg(`客服 ${data.agentName} 为您提供服务`);
+        document.getElementById('agentStatusText').innerText = data.isAi ? 'AI 智能客服随时待命' : '人工客服在线';
+        appendSystemMsg(data.message || `客服 ${data.agentName} 为您提供服务`);
         document.getElementById('offlineView').style.display = 'none';
+
+        if (data.messages && data.messages.length > 0) {
+          data.messages.forEach(m => {
+            if (m.from === 'system') appendSystemMsg(m.text);
+            else appendMessage(m.fromRole === 'visitor' ? 'visitor' : 'agent', m.text, m.msgType || 'text', m.fileInfo, m.isAi);
+          });
+        }
       }
       else if (type === 'no_agent_online') {
         document.getElementById('agentStatusText').innerText = '客服暂不在线';
         appendSystemMsg(data.message);
         document.getElementById('offlineView').style.display = 'flex';
       }
+      else if (type === 'visitor_blocked') {
+        isBlocked = true;
+        document.getElementById('agentStatusText').innerText = '访问受限';
+        appendSystemMsg('⚠️ ' + (data.message || '您的访问已被管理员列入黑名单，已限制连接。'));
+        document.getElementById('chatInput').disabled = true;
+        document.getElementById('btnSend').disabled = true;
+        if (ws) ws.close();
+      }
       else if (type === 'chat_invited') {
-        // 收到客服主动邀请
         window.parent.postMessage({
           action: 'SHOW_INVITE',
           payload: data
@@ -483,14 +637,16 @@
       }
       else if (type === 'chat_message') {
         appendMessage('agent', data.text, data.msgType, data.fileInfo, data.isAi);
-        // 通知父窗口增加未读气泡
         window.parent.postMessage({ action: 'NEW_MESSAGE_ALERT' }, '*');
       }
       else if (type === 'message_ack') {
-        // 自己发送成功的确认
+        // 成功送达
       }
       else if (type === 'chat_ended') {
         appendSystemMsg(data.message || '客服已结束会话');
+        if (data.showRatingPrompt) {
+          showRatingDialog();
+        }
       }
     }
 
@@ -556,18 +712,20 @@
     };
 
     function doSendMessage() {
+      if (isBlocked) {
+        alert('您的访问已被限制');
+        return;
+      }
       const text = chatInput.value.trim();
       if (!text) return;
 
       if (!ws || ws.readyState !== WebSocket.OPEN) {
-        alert('正在重新连接，请稍候发送');
+        alert('正在连接客服服务端，请稍候发送');
         return;
       }
 
-      // 立即在界面呈现访客消息
       appendMessage('visitor', text, 'text');
 
-      // 投递到服务端
       ws.send(JSON.stringify({
         type: 'send_message',
         data: {
@@ -577,7 +735,6 @@
         }
       }));
 
-      // 清空输入框并重置打字预知
       chatInput.value = '';
       ws.send(JSON.stringify({
         type: 'visitor_typing_preview',
@@ -593,8 +750,7 @@
       }
     };
 
-    // 核心特色功能：实时打字预知 (AI智客服核心功能)
-    // 当访客输入文字时，实时推送给客服端，无需按下发送键客服即可预览！
+    // 访客打字预知
     chatInput.oninput = () => {
       const currentText = chatInput.value;
       if (ws && ws.readyState === WebSocket.OPEN) {
@@ -647,6 +803,8 @@
               fileInfo: data.data
             }
           }));
+        } else {
+          alert('上传失败: ' + (data.message || '文件不符合要求'));
         }
       } catch (e) {
         alert('图片上传失败: ' + e.message);
@@ -670,7 +828,7 @@
         const res = await fetch('/api/offline-msg', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ name, phone, email, content, visitorId })
+          body: JSON.stringify({ name, phone, email, content, visitorId, appKey })
         });
         const result = await res.json();
         alert(result.message || '留言提交成功');
@@ -683,6 +841,74 @@
 
     document.getElementById('btnBackToChat').onclick = () => {
       document.getElementById('offlineView').style.display = 'none';
+    };
+
+    // ======================== 满意度评价逻辑 ========================
+    const ratingModal = document.getElementById('ratingModal');
+    let selectedStars = 5;
+
+    function showRatingDialog() {
+      ratingModal.style.display = 'flex';
+    }
+
+    document.getElementById('btnOpenRating').onclick = showRatingDialog;
+    document.getElementById('btnCloseRating').onclick = () => {
+      ratingModal.style.display = 'none';
+    };
+
+    // 评分星星选择交互
+    const starBtns = document.querySelectorAll('.star-btn');
+    starBtns.forEach(btn => {
+      btn.onclick = () => {
+        selectedStars = parseInt(btn.getAttribute('data-star'), 10);
+        updateStarsUI();
+      };
+    });
+
+    function updateStarsUI() {
+      starBtns.forEach(btn => {
+        const star = parseInt(btn.getAttribute('data-star'), 10);
+        if (star <= selectedStars) {
+          btn.classList.add('active');
+        } else {
+          btn.classList.remove('active');
+        }
+      });
+    }
+
+    // 标签多选交互
+    document.querySelectorAll('.tag-chip').forEach(chip => {
+      chip.onclick = () => {
+        chip.classList.toggle('selected');
+      };
+    });
+
+    // 提交评价
+    document.getElementById('btnSubmitRating').onclick = async () => {
+      const selectedTags = Array.from(document.querySelectorAll('.tag-chip.selected')).map(el => el.innerText);
+      const comment = document.getElementById('ratingComment').value.trim();
+
+      try {
+        const res = await fetch('/api/rate-chat', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            appKey,
+            chatId: currentChatId,
+            visitorId,
+            visitorName,
+            agentId: assignedAgentId,
+            stars: selectedStars,
+            tags: selectedTags,
+            comment
+          })
+        });
+        const result = await res.json();
+        ratingModal.style.display = 'none';
+        appendSystemMsg('⭐⭐⭐⭐⭐ ' + (result.message || '感谢您的评价与支持！'));
+      } catch (e) {
+        alert('评价提交失败: ' + e.message);
+      }
     };
 
     // 接收来自外部主网页的导航轨迹消息

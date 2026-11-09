@@ -79,6 +79,10 @@ const currentChatVisitorTags = document.getElementById('currentChatVisitorTags')
 const chatTopActions = document.getElementById('chatTopActions');
 const btnTransfer = document.getElementById('btnTransfer');
 const btnEndChat = document.getElementById('btnEndChat');
+const btnBlockVisitor = document.getElementById('btnBlockVisitor');
+const transferModal = document.getElementById('transferModal');
+const transferAgentList = document.getElementById('transferAgentList');
+const btnCloseTransferModal = document.getElementById('btnCloseTransferModal');
 
 const messagesFlow = document.getElementById('messagesFlow');
 const typingPreviewBar = document.getElementById('typingPreviewBar');
@@ -691,26 +695,108 @@ btnEndChat.onclick = () => {
   }
 };
 
-// 转接
-btnTransfer.onclick = () => {
-  const target = prompt('请输入转接的目标坐席工号 (例如: 1002 或 admin):');
-  if (target && target.trim()) {
+// 转接：下拉选择当前在线坐席 (替代手输工号)
+if (btnTransfer) {
+  btnTransfer.onclick = async () => {
+    if (!currentSelectedVisitorId) return;
+    transferModal.style.display = 'flex';
+    transferAgentList.innerHTML = '<div style="text-align: center; color: #94a3b8; padding: 20px;">正在获取在线坐席...</div>';
+
+    try {
+      const appKey = (currentAgent && currentAgent.appKey) || (loginAppKey && loginAppKey.value.trim()) || 'app_demo888';
+      const res = await fetch(`${currentServer}/api/online-agents?appKey=${appKey}`);
+      const result = await res.json();
+      const agents = (result.data || []).filter(a => a.id !== (currentAgent && currentAgent.id));
+
+      if (agents.length === 0) {
+        transferAgentList.innerHTML = '<div style="text-align: center; color: #64748b; padding: 24px;">当前无其他在线坐席可转接</div>';
+        return;
+      }
+
+      transferAgentList.innerHTML = agents.map(a => `
+        <div class="agent-card-item" onclick="executeTransfer('${a.id}', '${a.name}')" style="display: flex; align-items: center; justify-content: space-between; padding: 10px 14px; border: 1px solid #e2e8f0; border-radius: 6px; margin-bottom: 8px; cursor: pointer; transition: all 0.2s; background: #fff;" onmouseover="this.style.background='#f0f7ff'; this.style.borderColor='#93c5fd';" onmouseout="this.style.background='#fff'; this.style.borderColor='#e2e8f0';">
+          <div style="display: flex; align-items: center; gap: 10px;">
+            <div style="width: 34px; height: 34px; border-radius: 50%; background: #1890ff; color: #fff; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 13px;">${a.name.substring(0, 1)}</div>
+            <div>
+              <div style="font-weight: 600; font-size: 13.5px; color: #1e293b;">${a.name} <span style="font-size: 11px; color: #64748b; font-weight: normal;">(工号: ${a.id})</span></div>
+              <div style="font-size: 11px; color: #16a34a;">🟢 在线接听中</div>
+            </div>
+          </div>
+          <div style="font-size: 12px; color: #64748b; background: #f1f5f9; padding: 4px 8px; border-radius: 4px;">当前接待: ${a.activeChatsCount || 0}人</div>
+        </div>
+      `).join('');
+
+    } catch (e) {
+      transferAgentList.innerHTML = '<div style="text-align: center; color: #ef4444; padding: 20px;">获取在线客服失败: ' + e.message + '</div>';
+    }
+  };
+}
+
+if (btnCloseTransferModal) {
+  btnCloseTransferModal.onclick = () => {
+    transferModal.style.display = 'none';
+  };
+}
+
+window.executeTransfer = function(targetAgentId, targetAgentName) {
+  if (!confirm(`确认将当前访客转接给客服【${targetAgentName}】吗？`)) return;
+
+  if (ws && ws.readyState === WebSocket.OPEN) {
     ws.send(JSON.stringify({
       type: 'agent_transfer',
       data: {
         visitorId: currentSelectedVisitorId,
-        targetAgentId: target.trim()
+        targetAgentId
       }
     }));
+
     activeChatsMap.delete(currentSelectedVisitorId);
     currentSelectedVisitorId = null;
     chatTopActions.style.display = 'none';
     chatEditorPanel.style.display = 'none';
-    messagesFlow.innerHTML = '<div style="text-align: center; color: #94a3b8; margin-top: 150px;">会话已转接给其他坐席。</div>';
+    typingPreviewBar.style.display = 'none';
+    currentChatVisitorName.innerText = '请在左侧选择访客进行接待';
+    currentChatVisitorTags.innerHTML = '';
+    messagesFlow.innerHTML = `<div style="text-align: center; color: #94a3b8; margin-top: 150px;">会话已成功转接给客服【${targetAgentName}】。</div>`;
     updateStatsUI();
     renderActiveChatsList();
+    transferModal.style.display = 'none';
   }
 };
+
+// 一键拉黑恶意访客
+if (btnBlockVisitor) {
+  btnBlockVisitor.onclick = () => {
+    if (!currentSelectedVisitorId) return;
+    const chat = activeChatsMap.get(currentSelectedVisitorId);
+    const vName = chat ? chat.visitorInfo.name : currentSelectedVisitorId;
+
+    if (!confirm(`警告：确定要将【${vName}】加入系统黑名单并立即终止会话吗？拉黑后该访客将无法再次接入客服。`, '拉黑访客')) {
+      return;
+    }
+
+    if (ws && ws.readyState === WebSocket.OPEN) {
+      ws.send(JSON.stringify({
+        type: 'agent_block_visitor',
+        data: {
+          visitorId: currentSelectedVisitorId,
+          reason: '坐席工作台主动拉黑'
+        }
+      }));
+
+      activeChatsMap.delete(currentSelectedVisitorId);
+      currentSelectedVisitorId = null;
+      chatTopActions.style.display = 'none';
+      chatEditorPanel.style.display = 'none';
+      typingPreviewBar.style.display = 'none';
+      currentChatVisitorName.innerText = '请在左侧选择访客进行接待';
+      currentChatVisitorTags.innerHTML = '';
+      messagesFlow.innerHTML = '<div style="text-align: center; color: #ef4444; margin-top: 150px;">该访客已被成功拉黑并断开连接。</div>';
+      updateStatsUI();
+      renderActiveChatsList();
+    }
+  };
+}
 
 // 一键接管会话
 if (btnTakeover) {

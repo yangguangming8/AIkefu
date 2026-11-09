@@ -22,23 +22,62 @@ app.use(express.urlencoded({ extended: true }));
 // 静态托管前端资源
 app.use(express.static(path.join(__dirname, 'public')));
 
-// 文件上传
+// ======================== 文件上传安全加固 (白名单 + 扩展名净化) ========================
 const uploadsDir = path.join(__dirname, 'public', 'uploads');
 if (!fs.existsSync(uploadsDir)) {
   fs.mkdirSync(uploadsDir, { recursive: true });
 }
+
+// 严禁 HTML/SVG/脚本/可执行文件，防止同源 XSS 攻击
+const ALLOWED_EXTS = new Set(['.jpg', '.jpeg', '.png', '.gif', '.webp', '.pdf', '.doc', '.docx', '.txt', '.zip', '.rar']);
+const DANGEROUS_MIMES = new Set(['text/html', 'image/svg+xml', 'application/javascript', 'application/x-msdownload', 'text/javascript', 'application/x-sh']);
+
 const storage = multer.diskStorage({
   destination: (req, file, cb) => cb(null, uploadsDir),
   filename: (req, file, cb) => {
-    const ext = path.extname(file.originalname);
+    let ext = path.extname(file.originalname).toLowerCase();
+    if (!ALLOWED_EXTS.has(ext)) ext = '.dat';
     cb(null, `${Date.now()}_${Math.random().toString(36).substring(2, 8)}${ext}`);
   }
 });
-const upload = multer({ storage, limits: { fileSize: 20 * 1024 * 1024 } });
+
+const fileFilter = (req, file, cb) => {
+  const ext = path.extname(file.originalname).toLowerCase();
+  const mime = (file.mimetype || '').toLowerCase();
+
+  if (!ALLOWED_EXTS.has(ext) || DANGEROUS_MIMES.has(mime)) {
+    return cb(new Error('不允许上传此文件类型！仅允许上传图片(JPG/PNG/GIF/WEBP)、文档(PDF/DOC/DOCX/TXT)及压缩包。'), false);
+  }
+  cb(null, true);
+};
+
+const upload = multer({
+  storage,
+  limits: { fileSize: 20 * 1024 * 1024 }, // 限制最大 20MB
+  fileFilter
+});
+
+// ======================== JWT 安全鉴权中间件 ========================
+function authMiddleware(req, res, next) {
+  const authHeader = req.headers.authorization || req.headers['x-token'];
+  const token = authHeader ? (authHeader.startsWith('Bearer ') ? authHeader.slice(7) : authHeader) : req.query.token;
+
+  if (!token) {
+    return res.status(401).json({ code: 401, message: '请先登录' });
+  }
+
+  const payload = store.verifyToken(token);
+  if (!payload) {
+    return res.status(401).json({ code: 401, message: 'Token 无效或登录凭证已过期，请重新登录' });
+  }
+
+  req.user = payload;
+  next();
+}
 
 // ======================== SaaS 租户管理平台 RESTful API ========================
 
-// 1. 租户注册：开通 7 天全功能试用 + 赠送体验积分
+// 1. 租户注册：开通 7 天全功能试用 + 赠送 50,000 体验积分
 app.post('/api/saas/register', (req, res) => {
   const { companyName, contactName, phone, email, password } = req.body;
   if (!companyName || !phone || !password) {
@@ -48,6 +87,7 @@ app.post('/api/saas/register', (req, res) => {
   try {
     const tenant = store.registerTenant({ companyName, contactName, phone, email, password });
     const estimates = store.calculateCreditEstimate(tenant);
+    const token = store.signToken({ tenantId: tenant.tenantId, role: 'tenant_admin' });
     return res.json({
       code: 0,
       message: '企业注册成功！已自动为您开通7天全功能免费试用及体验积分',
@@ -56,7 +96,8 @@ app.post('/api/saas/register', (req, res) => {
         appKey: tenant.appKey,
         companyName: tenant.companyName,
         subscription: tenant.subscription,
-        estimates
+        estimates,
+        token
       }
     });
   } catch (err) {
@@ -64,16 +105,23 @@ app.post('/api/saas/register', (req, res) => {
   }
 });
 
-// 2. 租户企业管理员登录
+// 2. 租户企业管理员登录 (签发真实 JWT Token)
 app.post('/api/saas/login', (req, res) => {
   const { account, password } = req.body;
   const tenant = store.getTenantByEmailOrPhone(account) || (account === 'admin' ? store.data.tenants[0] : null);
-  
-  if (!tenant || tenant.password !== password) {
+
+  if (!tenant) {
+    return res.status(401).json({ code: -1, message: '企业账号不存在' });
+  }
+
+  const isPasswordValid = store.verifyPassword(password, tenant.passwordHash, tenant.passwordSalt);
+  if (!isPasswordValid) {
     return res.status(401).json({ code: -1, message: '账号或密码错误' });
   }
 
+  const token = store.signToken({ tenantId: tenant.tenantId, role: 'tenant_admin' });
   const estimates = store.calculateCreditEstimate(tenant);
+
   return res.json({
     code: 0,
     message: '登录成功',
@@ -85,7 +133,8 @@ app.post('/api/saas/login', (req, res) => {
       phone: tenant.phone,
       email: tenant.email,
       subscription: tenant.subscription,
-      estimates
+      estimates,
+      token
     }
   });
 });
@@ -169,7 +218,7 @@ app.post('/api/saas/subscribe-plan', (req, res) => {
 app.post('/api/saas/recharge-credits', (req, res) => {
   const { tenantId, packageId, customCredits } = req.body;
   const targetId = tenantId || store.data.tenants[0].tenantId;
-  
+
   let addAmount = 0;
   if (packageId) {
     const pkg = store.data.platformConfig.creditPackages.find(p => p.id === packageId);
@@ -280,9 +329,9 @@ app.post('/api/payment/notify/wechat', (req, res) => {
   res.status(200).send('<xml><return_code><![CDATA[SUCCESS]]></return_code><return_msg><![CDATA[OK]]></return_msg></xml>');
 });
 
-// ----------------- 通用接口 (坐席登录、文件上传、离线留言) -----------------
+// ======================== 客服业务 RESTful API ========================
 
-// 坐席登录 (支持指定 appKey/tenantId)
+// 坐席登录 (支持指定 appKey/tenantId，返回真正加密 JWT Token)
 app.post('/api/login', (req, res) => {
   const { username, password, appKey } = req.body;
   const tenant = store.getTenantByAppKey(appKey);
@@ -291,6 +340,13 @@ app.post('/api/login', (req, res) => {
   if (!agent) {
     return res.status(401).json({ code: -1, message: '工号或密码错误' });
   }
+
+  const token = store.signToken({
+    tenantId: tenant.tenantId,
+    agentId: agent.id,
+    username: agent.username,
+    role: 'agent'
+  });
 
   return res.json({
     code: 0,
@@ -302,25 +358,126 @@ app.post('/api/login', (req, res) => {
       avatar: agent.avatar,
       tenantId: tenant.tenantId,
       companyName: tenant.companyName,
-      token: 'tok_' + Date.now() + '_' + agent.id
+      token
     }
   });
 });
 
-app.post('/api/upload', upload.single('file'), (req, res) => {
-  if (!req.file) return res.status(400).json({ code: -1, message: '没有上传文件' });
-  res.json({
-    code: 0,
-    data: {
-      url: `/uploads/${req.file.filename}`,
-      originalName: req.file.originalname,
-      size: req.file.size,
-      mimetype: req.file.mimetype
+// 文件上传 (受白名单与错误捕获保护)
+app.post('/api/upload', (req, res) => {
+  upload.single('file')(req, res, (err) => {
+    if (err) {
+      return res.status(400).json({ code: -1, message: err.message });
     }
+    if (!req.file) {
+      return res.status(400).json({ code: -1, message: '没有上传文件' });
+    }
+    return res.json({
+      code: 0,
+      data: {
+        url: `/uploads/${req.file.filename}`,
+        originalName: req.file.originalname,
+        size: req.file.size,
+        mimetype: req.file.mimetype
+      }
+    });
   });
 });
 
-// 离线留言
+// 获取当前租户在线客服列表 (供转接、状态展示)
+app.get('/api/online-agents', (req, res) => {
+  const tenant = store.getTenantByAppKey(req.query.appKey);
+  const tCtx = getTenantContext(tenant.tenantId);
+  const list = [];
+  for (const [id, agent] of tCtx.agentsMap.entries()) {
+    if (agent.info.status === 'online') {
+      list.push({
+        id: agent.info.id,
+        name: agent.info.name,
+        avatar: agent.info.avatar,
+        status: agent.info.status,
+        activeChatsCount: agent.activeChats.size,
+        maxChats: agent.info.maxChats || 10
+      });
+    }
+  }
+  res.json({ code: 0, data: list });
+});
+
+// 黑名单管理：获取黑名单列表
+app.get('/api/blacklist', (req, res) => {
+  const tenant = store.getTenantByAppKey(req.query.appKey);
+  res.json({ code: 0, data: tenant.blacklist || [] });
+});
+
+// 黑名单管理：添加黑名单
+app.post('/api/blacklist', (req, res) => {
+  const { appKey, ip, visitorId, reason } = req.body;
+  const tenant = store.getTenantByAppKey(appKey);
+  if (!ip && !visitorId) {
+    return res.status(400).json({ code: -1, message: '必须提供 IP 或访客 ID' });
+  }
+
+  store.addBlacklist(tenant.tenantId, { ip, visitorId, reason });
+
+  // 如果该访客正在连接中，立刻主动断开并提示被拉黑
+  const tCtx = getTenantContext(tenant.tenantId);
+  for (const [vId, v] of tCtx.visitorsMap.entries()) {
+    if (vId === visitorId || (ip && v.info.ip === ip)) {
+      if (v.ws.readyState === WebSocket.OPEN) {
+        v.ws.send(JSON.stringify({
+          type: 'visitor_blocked',
+          data: { message: '您的访问已被管理员加入黑名单，已限制接入客服系统。' }
+        }));
+        v.ws.close();
+      }
+      tCtx.visitorsMap.delete(vId);
+      tCtx.activeSessions.delete(vId);
+    }
+  }
+
+  res.json({ code: 0, message: '已成功将该访客加入黑名单！' });
+});
+
+// 黑名单管理：移除黑名单
+app.delete('/api/blacklist/:id', (req, res) => {
+  const tenant = store.getTenantByAppKey(req.query.appKey);
+  const success = store.removeBlacklist(tenant.tenantId, req.params.id);
+  res.json({ code: success ? 0 : -1, message: success ? '已成功移出黑名单' : '未找到该黑名单记录' });
+});
+
+// 满意度评价上报
+app.post('/api/rate-chat', (req, res) => {
+  const { appKey, chatId, visitorId, visitorName, agentId, stars, tags, comment } = req.body;
+  const tenant = store.getTenantByAppKey(appKey);
+
+  const rating = store.addRating(tenant.tenantId, {
+    chatId,
+    visitorId,
+    visitorName,
+    agentId,
+    stars: parseInt(stars, 10) || 5,
+    tags: Array.isArray(tags) ? tags : [],
+    comment: comment || ''
+  });
+
+  // 广播给坐席工作台更新满意度
+  broadcastToTenantAgents(tenant.tenantId, {
+    type: 'new_rating',
+    data: rating
+  });
+
+  res.json({ code: 0, message: '感谢您的评价与支持！', data: rating });
+});
+
+// 获取满意度评价历史列表
+app.get('/api/ratings', (req, res) => {
+  const tenant = store.getTenantByAppKey(req.query.appKey);
+  const ratings = store.getRatings(tenant.tenantId);
+  res.json({ code: 0, data: ratings });
+});
+
+// 离线留言提交
 app.post('/api/offline-msg', (req, res) => {
   const { name, phone, email, content, visitorId, appKey } = req.body;
   const tenant = store.getTenantByAppKey(appKey);
@@ -354,6 +511,9 @@ app.get('/api/canned-messages', (req, res) => {
 app.get('/api/stats', (req, res) => {
   const tenant = store.getTenantByAppKey(req.query.appKey);
   const tCtx = getTenantContext(tenant.tenantId);
+  const ratings = store.getRatings(tenant.tenantId);
+  const avgStars = ratings.length ? (ratings.reduce((sum, r) => sum + r.stars, 0) / ratings.length).toFixed(1) : '5.0';
+
   res.json({
     code: 0,
     data: {
@@ -363,12 +523,14 @@ app.get('/api/stats', (req, res) => {
       activeChats: tCtx.activeSessions.size,
       aiCredits: tenant.subscription.aiCredits,
       totalHistory: (tenant.chatHistory || []).length,
-      offlineMsgs: (tenant.offlineMessages || []).length
+      offlineMsgs: (tenant.offlineMessages || []).length,
+      ratingCount: ratings.length,
+      averageRating: avgStars
     }
   });
 });
 
-// ======================== WebSocket 实时网关 (多租户 + AI 混合调度) ========================
+// ======================== WebSocket 实时网关 (多租户 + AI 混合调度 + 心跳保活) ========================
 
 // 多租户隔离上下文管理
 const tenantsContextMap = new Map(); // tenantId -> { agentsMap, visitorsMap, activeSessions }
@@ -377,8 +539,8 @@ function getTenantContext(tenantId) {
   if (!tenantsContextMap.has(tenantId)) {
     tenantsContextMap.set(tenantId, {
       agentsMap: new Map(),     // agentId -> { ws, info, activeChats: Set<visitorId> }
-      visitorsMap: new Map(),   // visitorId -> { ws, info, assignedAgentId, isAiHandled: bool, tracks: [] }
-      activeSessions: new Map() // visitorId -> { id, visitorId, agentId, isAiHandled, messages: [] }
+      visitorsMap: new Map(),   // visitorId -> { ws, info, assignedAgentId, isAiHandled: bool, tracks: [], lastActiveTime: number }
+      activeSessions: new Map() // visitorId -> { id, visitorId, agentId, isAiHandled, messages: [], lastActiveTime: number }
     });
   }
   return tenantsContextMap.get(tenantId);
@@ -403,7 +565,8 @@ function findBestOnlineAgent(tenantId) {
   for (const [agentId, agent] of tCtx.agentsMap.entries()) {
     if (agent.info.status === 'online') {
       const currentLoad = agent.activeChats.size;
-      if (currentLoad < agent.info.maxChats && currentLoad < minChats) {
+      const maxLimit = agent.info.maxChats || 10;
+      if (currentLoad < maxLimit && currentLoad < minChats) {
         minChats = currentLoad;
         selected = agent;
       }
@@ -416,6 +579,10 @@ wss.on('connection', (ws, req) => {
   let clientRole = null; // 'agent' 或 'visitor'
   let clientId = null;
   let currentTenantId = null;
+  const clientIp = req.headers['x-forwarded-for'] || req.socket.remoteAddress || '127.0.0.1';
+
+  ws.isAlive = true;
+  ws.on('pong', () => { ws.isAlive = true; });
 
   ws.on('message', async (messageBuffer) => {
     try {
@@ -503,6 +670,114 @@ wss.on('connection', (ws, req) => {
         return;
       }
 
+      // 坐席主动拉黑访客
+      if (type === 'agent_block_visitor') {
+        const { visitorId, reason } = data;
+        if (!currentTenantId) return;
+        const tCtx = getTenantContext(currentTenantId);
+        const visitor = tCtx.visitorsMap.get(visitorId);
+        const ip = visitor ? visitor.info.ip : '';
+
+        store.addBlacklist(currentTenantId, { ip, visitorId, reason: reason || '坐席主动拉黑' });
+
+        if (visitor && visitor.ws.readyState === WebSocket.OPEN) {
+          visitor.ws.send(JSON.stringify({
+            type: 'visitor_blocked',
+            data: { message: '您的访问已被客服列入黑名单，会话已终止。' }
+          }));
+          visitor.ws.close();
+        }
+
+        tCtx.visitorsMap.delete(visitorId);
+        tCtx.activeSessions.delete(visitorId);
+
+        const agentEntry = tCtx.agentsMap.get(clientId);
+        if (agentEntry) agentEntry.activeChats.delete(visitorId);
+
+        ws.send(JSON.stringify({
+          type: 'block_visitor_success',
+          data: { visitorId, message: '该访客已被成功拉黑并断开！' }
+        }));
+
+        broadcastToTenantAgents(currentTenantId, {
+          type: 'visitor_left_all',
+          data: { visitorId }
+        });
+        return;
+      }
+
+      // 坐席转接访客 (转给其他在线人工坐席)
+      if (type === 'agent_transfer') {
+        const { visitorId, targetAgentId } = data;
+        const tCtx = getTenantContext(currentTenantId);
+        const session = tCtx.activeSessions.get(visitorId);
+        const visitor = tCtx.visitorsMap.get(visitorId);
+        const targetAgent = tCtx.agentsMap.get(targetAgentId);
+        const fromAgent = tCtx.agentsMap.get(clientId);
+
+        if (!session || !visitor) {
+          ws.send(JSON.stringify({ type: 'transfer_result', data: { success: false, message: '会话不存在或访客已离开' } }));
+          return;
+        }
+
+        if (!targetAgent || targetAgent.info.status !== 'online') {
+          ws.send(JSON.stringify({ type: 'transfer_result', data: { success: false, message: '目标客服不在线，转接失败' } }));
+          return;
+        }
+
+        // 迁移会话关系
+        if (fromAgent) fromAgent.activeChats.delete(visitorId);
+        targetAgent.activeChats.add(visitorId);
+
+        session.agentId = targetAgent.info.id;
+        session.agentName = targetAgent.info.name;
+        session.isAiHandled = false;
+        visitor.assignedAgentId = targetAgent.info.id;
+        visitor.isAiHandled = false;
+
+        const tipMsg = {
+          id: 'msg_tf_' + Date.now(),
+          from: 'system',
+          fromRole: 'system',
+          to: visitorId,
+          text: `客服【${fromAgent ? fromAgent.info.name : '客服'}】已将为您转接至【${targetAgent.info.name}】为您服务。`,
+          time: new Date().toLocaleTimeString()
+        };
+        session.messages.push(tipMsg);
+
+        // 通知新坐席
+        targetAgent.ws.send(JSON.stringify({
+          type: 'chat_transferred_in',
+          data: {
+            visitorId,
+            visitorInfo: visitor.info,
+            session,
+            fromAgentName: fromAgent ? fromAgent.info.name : '客服'
+          }
+        }));
+
+        // 通知访客
+        if (visitor.ws.readyState === WebSocket.OPEN) {
+          visitor.ws.send(JSON.stringify({
+            type: 'chat_connected',
+            data: {
+              agentId: targetAgent.info.id,
+              agentName: targetAgent.info.name,
+              agentAvatar: targetAgent.info.avatar,
+              isAi: false,
+              message: tipMsg.text
+            }
+          }));
+        }
+
+        // 回复原坐席
+        ws.send(JSON.stringify({
+          type: 'transfer_result',
+          data: { success: true, visitorId, message: `已成功将访客转接给【${targetAgent.info.name}】` }
+        }));
+        return;
+      }
+
       // 核心人机协同：坐席【一键接管会话】
       if (type === 'agent_takeover') {
         const { visitorId } = data;
@@ -519,7 +794,6 @@ wss.on('connection', (ws, req) => {
           visitor.isAiHandled = false;
           agentEntry.activeChats.add(visitorId);
 
-          // 提示访客：人工坐席已接棒
           if (visitor.ws.readyState === WebSocket.OPEN) {
             visitor.ws.send(JSON.stringify({
               type: 'chat_connected',
@@ -533,7 +807,6 @@ wss.on('connection', (ws, req) => {
             }));
           }
 
-          // 回复坐席接管成功
           ws.send(JSON.stringify({
             type: 'takeover_success',
             data: { visitorId, session }
@@ -574,7 +847,7 @@ wss.on('connection', (ws, req) => {
         return;
       }
 
-      // 坐席结束对话
+      // 坐席结束对话 (附带满意度评分提示)
       if (type === 'agent_end_chat') {
         const { visitorId } = data;
         const tCtx = getTenantContext(currentTenantId);
@@ -592,7 +865,12 @@ wss.on('connection', (ws, req) => {
           if (visitor.ws.readyState === WebSocket.OPEN) {
             visitor.ws.send(JSON.stringify({
               type: 'chat_ended',
-              data: { message: '客服已结束本次对话，感谢您的支持！' }
+              data: {
+                chatId: session ? session.id : '',
+                agentId: clientId,
+                showRatingPrompt: true,
+                message: '客服已结束本次对话，请您为本次服务做出评价，感谢您的支持！'
+              }
             }));
           }
         }
@@ -607,10 +885,23 @@ wss.on('connection', (ws, req) => {
         currentTenantId = tenant.tenantId;
         clientRole = 'visitor';
 
+        const visitorId = data.visitorId || 'v_' + Math.random().toString(36).substring(2, 9);
+        clientId = visitorId;
+
+        // 黑名单安全检测
+        if (store.isBlacklisted(currentTenantId, clientIp, visitorId)) {
+          ws.send(JSON.stringify({
+            type: 'visitor_blocked',
+            data: { message: '您的访问已被管理员列入黑名单，已限制连接。' }
+          }));
+          ws.close();
+          return;
+        }
+
         const vInfo = {
-          visitorId: data.visitorId || 'v_' + Math.random().toString(36).substring(2, 9),
+          visitorId,
           name: data.name || '访客 ' + Math.random().toString(36).substring(2, 6).toUpperCase(),
-          ip: req.socket.remoteAddress || '127.0.0.1',
+          ip: clientIp,
           city: data.city || '本地访问',
           referrer: data.referrer || '直接访问',
           searchWord: data.searchWord || '无',
@@ -623,14 +914,13 @@ wss.on('connection', (ws, req) => {
           trackCount: 1
         };
 
-        clientId = vInfo.visitorId;
-
         const tCtx = getTenantContext(currentTenantId);
         const visitorObj = {
           ws,
           info: vInfo,
           assignedAgentId: null,
           isAiHandled: false,
+          lastActiveTime: Date.now(),
           tracks: [{ page: vInfo.currentPage, title: vInfo.pageTitle, time: new Date().toLocaleTimeString() }]
         };
         tCtx.visitorsMap.set(clientId, visitorObj);
@@ -652,12 +942,13 @@ wss.on('connection', (ws, req) => {
         return;
       }
 
-      // 访客页面切换轨迹跟踪
+      // 访客页面切换轨迹跟踪 (支持单页 SPA)
       if (type === 'visitor_navigate') {
         if (!currentTenantId) return;
         const tCtx = getTenantContext(currentTenantId);
         const visitor = tCtx.visitorsMap.get(clientId);
         if (visitor) {
+          visitor.lastActiveTime = Date.now();
           visitor.info.currentPage = data.pageUrl;
           visitor.info.pageTitle = data.pageTitle;
           visitor.info.trackCount++;
@@ -685,12 +976,15 @@ wss.on('connection', (ws, req) => {
         const visitor = tCtx.visitorsMap.get(clientId);
         if (!visitor) return;
 
-        // 若已有对话直接恢复
+        visitor.lastActiveTime = Date.now();
+
+        // 若已有进行中的对话则直接恢复
         if (tCtx.activeSessions.has(clientId)) {
           const sess = tCtx.activeSessions.get(clientId);
           ws.send(JSON.stringify({
             type: 'chat_connected',
             data: {
+              chatId: sess.id,
               agentId: sess.agentId,
               agentName: sess.agentName,
               isAi: sess.isAiHandled,
@@ -700,7 +994,7 @@ wss.on('connection', (ws, req) => {
           return;
         }
 
-        // 决策：AI 托管还是分配人工？
+        // 智能决策：AI 托管还是分配人工？
         const aiEnabled = tenant.aiConfig && tenant.aiConfig.enabled && (tenant.subscription.aiCredits > 0);
         const isAiFirst = tenant.aiConfig && tenant.aiConfig.mode === 'ai_first';
         const bestAgent = findBestOnlineAgent(currentTenantId);
@@ -728,6 +1022,7 @@ wss.on('connection', (ws, req) => {
             agentName: tenant.aiConfig.botName || 'AI智能客服',
             isAiHandled: true,
             startTime: new Date().toISOString(),
+            lastActiveTime: Date.now(),
             messages: [
               {
                 id: 'msg_' + Date.now(),
@@ -746,6 +1041,7 @@ wss.on('connection', (ws, req) => {
           ws.send(JSON.stringify({
             type: 'chat_connected',
             data: {
+              chatId: session.id,
               agentId: 'ai_bot',
               agentName: tenant.aiConfig.botName || 'AI智能客服',
               agentAvatar: tenant.aiConfig.botAvatar,
@@ -754,7 +1050,7 @@ wss.on('connection', (ws, req) => {
             }
           }));
 
-          // 同时广播给坐席工作台：AI 正在接待，坐席可实时围观或接管
+          // 广播给坐席工作台：AI 正在接待，坐席可实时围观或随时接管
           broadcastToTenantAgents(currentTenantId, {
             type: 'new_chat',
             data: {
@@ -780,6 +1076,7 @@ wss.on('connection', (ws, req) => {
             agentName: bestAgent.info.name,
             isAiHandled: false,
             startTime: new Date().toISOString(),
+            lastActiveTime: Date.now(),
             messages: [],
             tracks: visitor.tracks
           };
@@ -798,6 +1095,7 @@ wss.on('connection', (ws, req) => {
           ws.send(JSON.stringify({
             type: 'chat_connected',
             data: {
+              chatId: newSession.id,
               agentId: bestAgent.info.id,
               agentName: bestAgent.info.name,
               agentAvatar: bestAgent.info.avatar,
@@ -858,6 +1156,7 @@ wss.on('connection', (ws, req) => {
           const session = tCtx.activeSessions.get(clientId);
           if (session) {
             session.messages.push(messagePayload);
+            session.lastActiveTime = Date.now();
           }
           ws.send(JSON.stringify({ type: 'message_ack', data: messagePayload }));
 
@@ -938,6 +1237,7 @@ wss.on('connection', (ws, req) => {
               time: new Date().toLocaleTimeString()
             };
             session.messages.push(aiReplyPayload);
+            session.lastActiveTime = Date.now();
 
             // 回复访客
             ws.send(JSON.stringify({
@@ -957,6 +1257,7 @@ wss.on('connection', (ws, req) => {
           const session = tCtx.activeSessions.get(to);
           if (session) {
             session.messages.push(messagePayload);
+            session.lastActiveTime = Date.now();
           }
           const visitor = tCtx.visitorsMap.get(to);
           if (visitor && visitor.ws.readyState === WebSocket.OPEN) {
@@ -1005,6 +1306,44 @@ wss.on('connection', (ws, req) => {
       console.log(`[访客离开] 访客 ${clientId} 离开`);
     }
   });
+});
+
+// ======================== 定时任务：心跳探测与僵尸会话回收 ========================
+
+// 1. 每 30 秒执行 WebSocket 心跳保活探测
+const heartbeatInterval = setInterval(() => {
+  wss.clients.forEach((ws) => {
+    if (!ws.isAlive) {
+      return ws.terminate();
+    }
+    ws.isAlive = false;
+    ws.ping();
+  });
+}, 30000);
+
+// 2. 每 60 秒检查并清理超过 15 分钟无交互的离线会话，避免内存泄漏并归档历史
+const sessionCleanerInterval = setInterval(() => {
+  const now = Date.now();
+  const EXPIRE_TIMEOUT = 15 * 60 * 1000; // 15分钟
+
+  for (const [tenantId, tCtx] of tenantsContextMap.entries()) {
+    for (const [vId, session] of tCtx.activeSessions.entries()) {
+      const isVisitorOnline = tCtx.visitorsMap.has(vId);
+      const lastActive = session.lastActiveTime || 0;
+
+      if (!isVisitorOnline && (now - lastActive > EXPIRE_TIMEOUT)) {
+        // 自动将会话归档存盘
+        store.saveChatHistory(tenantId, session);
+        tCtx.activeSessions.delete(vId);
+        console.log(`[会话自动回收] 租户 ${tenantId} 访客 ${vId} 超时未活跃，已归档释放`);
+      }
+    }
+  }
+}, 60000);
+
+wss.on('close', () => {
+  clearInterval(heartbeatInterval);
+  clearInterval(sessionCleanerInterval);
 });
 
 server.listen(PORT, () => {
