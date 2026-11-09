@@ -289,6 +289,9 @@
       </div>
     </div>
     <div class="header-actions">
+      <button class="icon-btn" id="btnRequestHuman" style="font-size: 11.5px; padding: 3px 8px; background: rgba(255,255,255,0.22); border-radius: 12px; gap: 4px; display: inline-flex; align-items: center;" title="呼叫人工客服坐席">
+        <span>👨‍💼 转人工</span>
+      </button>
       <button class="icon-btn" id="btnMinimize" title="最小化">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="5" y1="12" x2="19" y2="12"></line></svg>
       </button>
@@ -373,6 +376,7 @@
     const currentPage = urlParams.get('currentPage') || '/';
     const pageTitle = urlParams.get('pageTitle') || '网站页面';
     const serverHost = urlParams.get('serverHost') || window.location.origin;
+    const appKey = urlParams.get('appKey') || 'app_demo888';
 
     // 生成或恢复访客唯一标识
     let visitorId = localStorage.getItem('__IBANGKF_VID__');
@@ -410,7 +414,7 @@
       }
 
       ws.onopen = () => {
-        // 上报访客进入
+        // 上报访客进入 (带租户 appKey)
         ws.send(JSON.stringify({
           type: 'visitor_enter',
           data: {
@@ -418,14 +422,15 @@
             referrer,
             currentPage,
             pageTitle,
-            userAgent: navigator.userAgent
+            userAgent: navigator.userAgent,
+            appKey
           }
         }));
 
-        // 自动呼叫客服
+        // 自动呼叫客服 (AI 或人工)
         ws.send(JSON.stringify({
           type: 'visitor_call',
-          data: { visitorId }
+          data: { visitorId, appKey }
         }));
       };
 
@@ -477,7 +482,7 @@
         appendSystemMsg(`您的对话已转接至客服：${data.agentName}`);
       }
       else if (type === 'chat_message') {
-        appendMessage('agent', data.text, data.msgType, data.fileInfo);
+        appendMessage('agent', data.text, data.msgType, data.fileInfo, data.isAi);
         // 通知父窗口增加未读气泡
         window.parent.postMessage({ action: 'NEW_MESSAGE_ALERT' }, '*');
       }
@@ -502,16 +507,30 @@
       chatBody.scrollTop = chatBody.scrollHeight;
     }
 
-    function appendMessage(role, text, msgType = 'text', fileInfo = null) {
+    function appendMessage(role, text, msgType = 'text', fileInfo = null, isAi = false) {
       const row = document.createElement('div');
       row.className = `msg-item ${role}`;
 
       const avatar = document.createElement('div');
       avatar.className = 'msg-avatar';
-      avatar.innerText = role === 'visitor' ? '我' : (document.getElementById('agentName').innerText.substring(0, 1) || '客');
+      if (role === 'visitor') {
+        avatar.innerText = '我';
+      } else if (isAi) {
+        avatar.innerText = '🤖';
+        avatar.style.background = '#e0f2fe';
+      } else {
+        avatar.innerText = document.getElementById('agentName').innerText.substring(0, 1) || '客';
+      }
 
       const bubble = document.createElement('div');
       bubble.className = 'msg-bubble';
+
+      if (isAi) {
+        const aiBadge = document.createElement('div');
+        aiBadge.style.cssText = 'font-size: 11px; color: #0284c7; font-weight: 600; margin-bottom: 4px; display: flex; align-items: center; gap: 4px;';
+        aiBadge.innerHTML = '<span>🤖 AI 智能解答</span>';
+        bubble.appendChild(aiBadge);
+      }
 
       if (msgType === 'image') {
         const img = document.createElement('img');
@@ -519,7 +538,9 @@
         img.onclick = () => window.open(img.src, '_blank');
         bubble.appendChild(img);
       } else {
-        bubble.innerText = text;
+        const textSpan = document.createElement('div');
+        textSpan.innerText = text;
+        bubble.appendChild(textSpan);
       }
 
       row.appendChild(avatar);
@@ -527,6 +548,12 @@
       chatBody.appendChild(row);
       chatBody.scrollTop = chatBody.scrollHeight;
     }
+
+    // 转人工按钮绑定
+    document.getElementById('btnRequestHuman').onclick = () => {
+      chatInput.value = '您好，我想咨询人工在线客服';
+      doSendMessage();
+    };
 
     function doSendMessage() {
       const text = chatInput.value.trim();

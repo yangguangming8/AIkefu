@@ -3,15 +3,19 @@
   if (window.__IBANGKF_LOADED__) return;
   window.__IBANGKF_LOADED__ = true;
 
-  // 获取服务端 Host 地址 (根据 script 标签的 src 自动解析，支持 file:/// 降级与绝对URL解析)
+  // 获取服务端 Host 地址与专属租户 appKey
   const scripts = document.getElementsByTagName('script');
   let serverHost = 'http://127.0.0.1:8080';
+  let appKey = 'app_demo888';
   for (let s of scripts) {
     if (s.src && s.src.indexOf('widget.js') !== -1) {
       try {
         const url = new URL(s.src, window.location.href);
         if (url.protocol.startsWith('http') && url.host) {
           serverHost = `${url.protocol}//${url.host}`;
+        }
+        if (url.searchParams.get('appKey')) {
+          appKey = url.searchParams.get('appKey');
         }
       } catch (e) {}
       break;
@@ -223,12 +227,13 @@
     iframeWrap.className = 'ibangkf-iframe-wrap';
     iframeWrap.id = 'ibangkfIframeWrap';
     
-    // 传给 iframe 当前页面参数
+    // 传给 iframe 当前页面参数与租户 appKey
     const params = new URLSearchParams({
       referrer: document.referrer || '',
       currentPage: window.location.href,
       pageTitle: document.title || '当前网页',
-      serverHost: serverHost
+      serverHost: serverHost,
+      appKey: appKey
     });
     
     // 如果当前通过 file:/// 打开，iframe 地址通过 http://127.0.0.1:8080/widget.html 访问

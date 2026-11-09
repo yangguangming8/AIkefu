@@ -98,6 +98,10 @@ const cannedAccordion = document.getElementById('cannedAccordion');
 const cannedSearch = document.getElementById('cannedSearch');
 const btnAddCannedDialog = document.getElementById('btnAddCannedDialog');
 
+const btnTakeover = document.getElementById('btnTakeover');
+const btnReleaseToAi = document.getElementById('btnReleaseToAi');
+const loginAppKey = document.getElementById('loginAppKey');
+
 // 画像字段
 const vpName = document.getElementById('vpName');
 const vpIp = document.getElementById('vpIp');
@@ -123,6 +127,8 @@ btnDoLogin.onclick = async () => {
 
   currentServer = server;
 
+  const appKey = (loginAppKey && loginAppKey.value.trim()) || 'app_demo888';
+
   try {
     btnDoLogin.innerText = '正在验证并连接...';
     btnDoLogin.disabled = true;
@@ -130,7 +136,7 @@ btnDoLogin.onclick = async () => {
     const res = await fetch(`${currentServer}/api/login`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ username, password })
+      body: JSON.stringify({ username, password, appKey })
     });
     const result = await res.json();
 
@@ -142,7 +148,7 @@ btnDoLogin.onclick = async () => {
     }
 
     currentAgent = result.data;
-    initWebSocket(username, password);
+    initWebSocket(username, password, appKey);
 
   } catch (e) {
     alert('连接服务器失败: ' + e.message);
@@ -151,14 +157,14 @@ btnDoLogin.onclick = async () => {
   }
 };
 
-function initWebSocket(username, password) {
+function initWebSocket(username, password, appKey = 'app_demo888') {
   const wsUrl = currentServer.replace(/^http/, 'ws');
   ws = new WebSocket(wsUrl);
 
   ws.onopen = () => {
     ws.send(JSON.stringify({
       type: 'agent_login',
-      data: { username, password }
+      data: { username, password, appKey }
     }));
   };
 
@@ -521,8 +527,21 @@ function selectChatVisitor(visitorId) {
   chat.unread = 0;
   updateStatsUI();
 
-  // 更新中间顶部状态
-  currentChatVisitorName.innerText = chat.visitorInfo.name;
+  // 更新中间顶部状态与 AI 接管控制
+  const isAi = chat.session && chat.session.isAiHandled;
+  if (btnTakeover && btnReleaseToAi) {
+    if (isAi) {
+      btnTakeover.style.display = 'inline-block';
+      btnReleaseToAi.style.display = 'none';
+      currentChatVisitorName.innerHTML = `${chat.visitorInfo.name} <span style="font-size: 11px; background: #e0f2fe; color: #0284c7; padding: 2px 6px; border-radius: 4px; font-weight: normal;">🤖 AI托管中</span>`;
+    } else {
+      btnTakeover.style.display = 'none';
+      btnReleaseToAi.style.display = 'inline-block';
+      currentChatVisitorName.innerHTML = `${chat.visitorInfo.name} <span style="font-size: 11px; background: #f0fdf4; color: #16a34a; padding: 2px 6px; border-radius: 4px; font-weight: normal;">👨‍💼 人工接待中</span>`;
+    }
+  } else {
+    currentChatVisitorName.innerText = chat.visitorInfo.name;
+  }
   currentChatVisitorTags.innerHTML = `<span>IP: ${chat.visitorInfo.ip || '未知'}</span> <span>城市: ${chat.visitorInfo.city || '本地'}</span> <span>正在浏览: ${chat.visitorInfo.pageTitle || '页面'}</span>`;
   chatTopActions.style.display = 'flex';
   chatEditorPanel.style.display = 'flex';
@@ -550,19 +569,26 @@ function selectChatVisitor(visitorId) {
 
 function appendMessageToFlow(msg) {
   const row = document.createElement('div');
-  const isAgent = msg.fromRole === 'agent' || msg.from === currentAgent.id;
+  const isAgent = msg.fromRole === 'agent' || msg.from === (currentAgent && currentAgent.id);
+  const isAi = msg.isAi || msg.from === 'ai_bot';
   row.className = `msg-bubble-row ${isAgent ? 'agent' : 'visitor'}`;
 
   const avatar = document.createElement('div');
   avatar.className = 'bubble-avatar';
-  avatar.innerText = isAgent ? '我' : '客';
+  if (isAi) {
+    avatar.innerText = '🤖';
+    avatar.style.background = '#0284c7';
+  } else {
+    avatar.innerText = isAgent ? '我' : '客';
+  }
 
   const body = document.createElement('div');
   body.className = 'bubble-body';
 
   const sender = document.createElement('div');
   sender.className = 'bubble-sender';
-  sender.innerText = `${isAgent ? currentAgent.name : '访客'} ${msg.time || ''}`;
+  const senderName = isAi ? '🤖 AI智能客服' : (isAgent ? currentAgent.name : '访客');
+  sender.innerText = `${senderName} ${msg.time || ''} ${msg.tokensUsed ? `(耗费 ${msg.tokensUsed} Token)` : ''}`;
 
   const bubble = document.createElement('div');
   bubble.className = 'bubble-text';
@@ -685,6 +711,40 @@ btnTransfer.onclick = () => {
     renderActiveChatsList();
   }
 };
+
+// 一键接管会话
+if (btnTakeover) {
+  btnTakeover.onclick = () => {
+    if (!currentSelectedVisitorId) return;
+    ws.send(JSON.stringify({
+      type: 'agent_takeover',
+      data: { visitorId: currentSelectedVisitorId }
+    }));
+    const chat = activeChatsMap.get(currentSelectedVisitorId);
+    if (chat) {
+      if (!chat.session) chat.session = {};
+      chat.session.isAiHandled = false;
+    }
+    selectChatVisitor(currentSelectedVisitorId);
+  };
+}
+
+// 交还 AI 托管
+if (btnReleaseToAi) {
+  btnReleaseToAi.onclick = () => {
+    if (!currentSelectedVisitorId) return;
+    ws.send(JSON.stringify({
+      type: 'agent_release_to_ai',
+      data: { visitorId: currentSelectedVisitorId }
+    }));
+    const chat = activeChatsMap.get(currentSelectedVisitorId);
+    if (chat) {
+      if (!chat.session) chat.session = {};
+      chat.session.isAiHandled = true;
+    }
+    selectChatVisitor(currentSelectedVisitorId);
+  };
+}
 
 // 图片上传
 clientImageUpload.onchange = async () => {

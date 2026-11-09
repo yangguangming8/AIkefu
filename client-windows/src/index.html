@@ -72,6 +72,8 @@
           <div class="vh-tags" id="currentChatVisitorTags"></div>
         </div>
         <div class="vh-actions" id="chatTopActions" style="display: none;">
+          <button class="btn-action-sm" id="btnTakeover" style="background: #2563eb; color: #fff; border-color: #2563eb;">🤖 一键接管会话</button>
+          <button class="btn-action-sm" id="btnReleaseToAi" style="display: none; background: #f0fdf4; color: #16a34a; border-color: #bbf7d0;">🤝 交还 AI 托管</button>
           <button class="btn-action-sm" id="btnTransfer">转接坐席</button>
           <button class="btn-action-sm btn-action-danger" id="btnEndChat">结束会话</button>
         </div>
@@ -172,6 +174,11 @@
       <div class="form-input-group">
         <label>服务器地址</label>
         <input type="text" class="form-input-control" id="loginServer" value="http://127.0.0.1:8080">
+      </div>
+
+      <div class="form-input-group">
+        <label>企业专属代码 / AppKey (留空使用默认企业)</label>
+        <input type="text" class="form-input-control" id="loginAppKey" placeholder="默认: app_demo888 (留空即可)">
       </div>
 
       <div class="form-input-group">
