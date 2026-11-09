@@ -386,11 +386,28 @@
     let typingTimer = null;
 
     // 初始化 WebSocket 连接
-    const wsProto = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    const wsUrl = `${wsProto}//${window.location.host}`;
+    let targetHost = window.location.host;
+    let isHttps = window.location.protocol === 'https:';
+    if (!targetHost || window.location.protocol === 'file:') {
+      try {
+        const parsed = new URL(serverHost || 'http://127.0.0.1:8080');
+        targetHost = parsed.host || '127.0.0.1:8080';
+        isHttps = parsed.protocol === 'https:';
+      } catch (e) {
+        targetHost = '127.0.0.1:8080';
+      }
+    }
+    const wsProto = isHttps ? 'wss:' : 'ws:';
+    const wsUrl = `${wsProto}//${targetHost}`;
 
     function connect() {
-      ws = new WebSocket(wsUrl);
+      try {
+        ws = new WebSocket(wsUrl);
+      } catch (err) {
+        document.getElementById('agentStatusText').innerText = '未连接到客服服务端 (8080)';
+        setTimeout(connect, 3000);
+        return;
+      }
 
       ws.onopen = () => {
         // 上报访客进入

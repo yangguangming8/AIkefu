@@ -12,6 +12,36 @@
       background-color: #f7fafc;
       line-height: 1.6;
     }
+
+    /* 顶部服务探测状态栏 */
+    .service-status-bar {
+      padding: 10px 20px;
+      font-size: 13.5px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      transition: all 0.3s;
+    }
+    .status-warning {
+      background: #fff7ed;
+      color: #c2410c;
+      border-bottom: 1px solid #fed7aa;
+    }
+    .status-ok {
+      background: #f0fdf4;
+      color: #15803d;
+      border-bottom: 1px solid #bbf7d0;
+    }
+    .btn-retry-check {
+      background: #ea580c;
+      color: #fff;
+      border: none;
+      padding: 4px 12px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 12px;
+    }
+
     header {
       background: #ffffff;
       border-bottom: 1px solid #e2e8f0;
@@ -76,7 +106,7 @@
     
     .container {
       max-width: 1200px;
-      margin: 60px auto;
+      margin: 40px auto;
       padding: 0 24px;
     }
     .section-title {
@@ -115,6 +145,14 @@
 </head>
 <body>
 
+  <!-- 服务端运行状态检测指示横幅 -->
+  <div class="service-status-bar status-warning" id="serverStatusBar">
+    <div id="statusText">
+      🔍 正在检测客服后端状态 (http://127.0.0.1:8080)...
+    </div>
+    <button class="btn-retry-check" id="btnCheckServer" onclick="checkServerStatus()">重新检测</button>
+  </div>
+
   <header>
     <div class="logo">
       <span>⚡ 智邦云端科技</span>
@@ -132,14 +170,14 @@
     <h1 id="pageHeading">新一代企业全渠道智能客服解决方案</h1>
     <p id="pageDesc">打通 Web、Windows、移动多端交互，毫秒级访客打字预知与全轨迹追踪，助力企业销售线索转化率翻倍！</p>
     <div class="btn-group">
-      <button class="btn btn-light" onclick="document.getElementById('ibangkfToggleBtn')?.click()">立即在线咨询</button>
+      <button class="btn btn-light" onclick="triggerOpenChat()">💬 立即在线咨询</button>
       <button class="btn btn-outline" onclick="switchPage('全功能定价与版本', '/pricing')">了解定价</button>
     </div>
   </section>
 
   <div class="container">
     <div class="notice-box">
-      💡 <strong>测试提示：</strong> 当前页面已通过一行代码嵌入 <code>&lt;script src="/widget.js"&gt;&lt;/script&gt;</code>。您点击上方不同导航菜单时，右侧/客服客户端将实时更新您的当前访问轨迹；在右下角咨询窗口中输入文字时，客服端可以无延迟实时预览您正在打的内容！
+      💡 <strong>体验提示：</strong> 页面右下角有显眼的【💬 咨询客服】蓝色浮球。点击即可打开访客咨询窗口；在右下角窗口打字（即便没按回车），Windows客服坐席端也能实时看到你正在输入的字！
     </div>
 
     <h2 class="section-title">核心业务架构与服务</h2>
@@ -159,18 +197,48 @@
     </div>
   </div>
 
-  <!-- 模拟多页面跳转 (上报轨迹) -->
   <script>
+    function triggerOpenChat() {
+      const btn = document.getElementById('ibangkfToggleBtn') || document.getElementById('ibangkfLabelBtn');
+      if (btn) {
+        btn.click();
+      } else {
+        alert('正在加载客服挂件，请稍候...');
+      }
+    }
+
+    // 自动检测客服后端是否启动
+    async function checkServerStatus() {
+      const bar = document.getElementById('serverStatusBar');
+      const text = document.getElementById('statusText');
+      try {
+        const res = await fetch('http://127.0.0.1:8080/api/stats', { mode: 'cors' });
+        const data = await res.json();
+        if (data.code === 0) {
+          bar.className = 'service-status-bar status-ok';
+          text.innerHTML = '🟢 <strong>客服服务端运行正常 (127.0.0.1:8080)</strong>，点击右下角蓝色浮球即可发起在线咨询！';
+          document.getElementById('btnCheckServer').style.display = 'none';
+          return;
+        }
+      } catch (e) {}
+
+      bar.className = 'service-status-bar status-warning';
+      text.innerHTML = '⚠️ <strong>注意：客服服务端尚未启动！</strong> 请双击项目根目录下的 <strong>start-all.bat</strong> 或 <strong>start-server.bat</strong> 启动后台服务，然后刷新页面！';
+      document.getElementById('btnCheckServer').style.display = 'inline-block';
+    }
+
+    checkServerStatus();
+
+    // 模拟多页面跳转
     function switchPage(title, path) {
       document.title = title + ' - 某科技集团官方网站';
       document.getElementById('pageHeading').innerText = title;
-      window.history.pushState({}, title, path);
+      try { window.history.pushState({}, title, path); } catch(e) {}
 
       document.querySelectorAll('nav a').forEach(a => {
         a.classList.toggle('active', a.innerText.indexOf(title.substring(0, 2)) !== -1);
       });
 
-      // 向内部 iframe 抛出页面导航事件
       const iframe = document.getElementById('ibangkfIframe');
       if (iframe && iframe.contentWindow) {
         iframe.contentWindow.postMessage({
@@ -181,8 +249,8 @@
     }
   </script>
 
-  <!-- 引入爱邦客访客端挂件 (一行代码即可接入任何网站) -->
-  <script src="/widget.js"></script>
+  <!-- 引入爱邦客访客端挂件 (使用相对路径，兼容 http 和本地文件) -->
+  <script src="widget.js"></script>
 
 </body>
 </html>
