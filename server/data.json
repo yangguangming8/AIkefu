@@ -45,8 +45,8 @@
         "status": "active",
         "trialExpiresAt": "2026-11-16T01:32:36.452Z",
         "hasManualPlan": true,
-        "manualPlanExpiresAt": "2027-11-09T01:32:36.452Z",
-        "aiCredits": 50000,
+        "manualPlanExpiresAt": "2028-11-08T01:32:36.452Z",
+        "aiCredits": 550000,
         "totalCreditsUsed": 3600
       },
       "aiConfig": {
@@ -269,6 +269,42 @@
       },
       "offlineMessages": [],
       "chatHistory": []
+    }
+  ],
+  "orders": [
+    {
+      "orderId": "ORD_1794189151805_WLPC",
+      "tenantId": "tenant_default",
+      "companyName": "智邦云端科技 (演示租户)",
+      "title": "AI 智能客服 50万 Token 积分包",
+      "orderType": "ai_credits",
+      "packageId": "pkg_50w",
+      "credits": 500000,
+      "amountCNY": 79,
+      "amountUSD": 10.97,
+      "payMethod": "wechat",
+      "status": "paid",
+      "payeePaypalEmail": "181827969@qq.com",
+      "createdAt": "2026-11-09T01:52:31.805Z",
+      "paidAt": "2026-11-09T01:52:31.817Z",
+      "payDetails": {}
+    },
+    {
+      "orderId": "ORD_1794189151737_QMHJ",
+      "tenantId": "tenant_default",
+      "companyName": "智邦云端科技 (演示租户)",
+      "title": "人工客服标准版 (1年)",
+      "orderType": "manual_plan",
+      "packageId": null,
+      "credits": 0,
+      "amountCNY": 199,
+      "amountUSD": 27.64,
+      "payMethod": "paypal",
+      "status": "paid",
+      "payeePaypalEmail": "181827969@qq.com",
+      "createdAt": "2026-11-09T01:52:31.737Z",
+      "paidAt": "2026-11-09T01:52:31.811Z",
+      "payDetails": {}
     }
   ]
 }

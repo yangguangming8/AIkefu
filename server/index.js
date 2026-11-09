@@ -7,6 +7,7 @@ const multer = require('multer');
 const fs = require('fs');
 const store = require('./store');
 const aiService = require('./ai-service');
+const paymentService = require('./payment-service');
 
 const app = express();
 const server = http.createServer(app);
@@ -193,9 +194,90 @@ app.get('/api/saas/packages', (req, res) => {
     code: 0,
     data: {
       yearlyPrice: store.data.platformConfig.yearlyPrice,
-      creditPackages: store.data.platformConfig.creditPackages
+      creditPackages: store.data.platformConfig.creditPackages,
+      paypalPayee: paymentService.payeePaypalEmail
     }
   });
+});
+
+// ======================== 微信支付 & PayPal 支付 API ========================
+
+// 1. 创建支付订单 (支持 199 元年费或积分包，支持微信支付 / PayPal)
+app.post('/api/payment/create-order', (req, res) => {
+  try {
+    const { tenantId, orderType, packageId, payMethod } = req.body;
+    const targetTenantId = tenantId || store.data.tenants[0].tenantId;
+    const order = paymentService.createOrder({
+      tenantId: targetTenantId,
+      orderType,
+      packageId,
+      payMethod: payMethod || 'wechat'
+    });
+
+    let payData = {};
+    if (order.payMethod === 'paypal') {
+      payData = {
+        payeeEmail: paymentService.payeePaypalEmail,
+        checkoutUrl: paymentService.generatePaypalCheckoutUrl(order)
+      };
+    } else {
+      payData = paymentService.generateWechatPayData(order);
+    }
+
+    res.json({
+      code: 0,
+      message: '订单创建成功',
+      data: {
+        order,
+        payData
+      }
+    });
+  } catch (err) {
+    res.status(400).json({ code: -1, message: err.message });
+  }
+});
+
+// 2. 轮询订单支付状态
+app.get('/api/payment/order/:orderId', (req, res) => {
+  const order = paymentService.getOrder(req.params.orderId);
+  if (!order) return res.status(404).json({ code: -1, message: '订单未找到' });
+  res.json({ code: 0, data: order });
+});
+
+// 3. 支付完成履约确认 (买家付款成功后触发确认入账)
+app.post('/api/payment/confirm-paid', (req, res) => {
+  try {
+    const { orderId, payDetails } = req.body;
+    const updatedOrder = paymentService.completeOrder(orderId, payDetails);
+    res.json({
+      code: 0,
+      message: '支付成功！套餐/积分已自动为您激活入账',
+      data: updatedOrder
+    });
+  } catch (err) {
+    res.status(400).json({ code: -1, message: err.message });
+  }
+});
+
+// 4. 获取当前租户的全部历史支付账单
+app.get('/api/payment/tenant-orders', (req, res) => {
+  const tenantId = req.query.tenantId || store.data.tenants[0].tenantId;
+  const orders = paymentService.getTenantOrders(tenantId);
+  res.json({ code: 0, data: orders });
+});
+
+// 5. PayPal IPN / Webhook 回调
+app.post('/api/payment/notify/paypal', (req, res) => {
+  const { invoice, payment_status, txn_id } = req.body;
+  if (invoice && (payment_status === 'Completed' || payment_status === 'Processed')) {
+    paymentService.completeOrder(invoice, { source: 'paypal_ipn', txn_id });
+  }
+  res.status(200).send('OK');
+});
+
+// 6. 微信支付结果通知回调
+app.post('/api/payment/notify/wechat', (req, res) => {
+  res.status(200).send('<xml><return_code><![CDATA[SUCCESS]]></return_code><return_msg><![CDATA[OK]]></return_msg></xml>');
 });
 
 // ----------------- 通用接口 (坐席登录、文件上传、离线留言) -----------------
