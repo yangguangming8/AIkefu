@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>iBangKF 爱邦客 - SaaS 企业云管理控制台</title>
+  <title>AIkefu AI智客服 - SaaS 企业云管理控制台</title>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body {
@@ -320,7 +320,7 @@
   <!-- 左侧控制台导航 -->
   <aside class="sidebar">
     <div class="brand">
-      <span>⚡ iBangKF</span>
+      <span>⚡ AIkefu</span>
       <span class="brand-tag">SaaS云平台</span>
     </div>
 
@@ -694,7 +694,7 @@
 
     // 检查登录状态并加载租户资料
     async function loadTenantProfile() {
-      const storedTenantId = localStorage.getItem('__IBANGKF_TENANT_ID__');
+      const storedTenantId = localStorage.getItem('__AIKEFU_TENANT_ID__');
       try {
         const res = await fetch(`/api/saas/profile?tenantId=${storedTenantId || ''}`);
         const data = await res.json();
@@ -924,7 +924,7 @@
           const result = await res.json();
           if (result.code === 0) {
             alert(result.message || '注册成功！');
-            localStorage.setItem('__IBANGKF_TENANT_ID__', result.data.tenantId);
+            localStorage.setItem('__AIKEFU_TENANT_ID__', result.data.tenantId);
             document.getElementById('authModal').style.display = 'none';
             loadTenantProfile();
           } else {
@@ -944,7 +944,7 @@
           });
           const result = await res.json();
           if (result.code === 0) {
-            localStorage.setItem('__IBANGKF_TENANT_ID__', result.data.tenantId);
+            localStorage.setItem('__AIKEFU_TENANT_ID__', result.data.tenantId);
             document.getElementById('authModal').style.display = 'none';
             loadTenantProfile();
           } else {
@@ -957,7 +957,7 @@
     }
 
     function logout() {
-      localStorage.removeItem('__IBANGKF_TENANT_ID__');
+      localStorage.removeItem('__AIKEFU_TENANT_ID__');
       location.reload();
     }
 

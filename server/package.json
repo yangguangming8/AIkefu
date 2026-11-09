@@ -1,7 +1,7 @@
 {
-  "name": "ibangkf-server",
+  "name": "aikefu-server",
   "version": "1.0.0",
-  "description": "iBangKF Service Backend with WebSocket and Visitor Tracking",
+  "description": "AIkefu Service Backend with WebSocket and Visitor Tracking",
   "main": "index.js",
   "scripts": {
     "start": "node index.js"

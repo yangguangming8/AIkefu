@@ -96,7 +96,7 @@ class PaymentService {
     const params = new URLSearchParams({
       cmd: '_xclick',
       business: this.payeePaypalEmail,
-      item_name: `iBangKF SaaS - ${order.title}`,
+      item_name: `AIkefu SaaS - ${order.title}`,
       amount: order.amountUSD.toString(),
       currency_code: 'USD',
       invoice: order.orderId,

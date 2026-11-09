@@ -284,7 +284,7 @@
     <div class="header-left">
       <div class="agent-avatar" id="agentAvatar">客</div>
       <div class="agent-meta">
-        <h3 id="agentName">爱邦客客服中心</h3>
+        <h3 id="agentName">AIkefu 客服中心</h3>
         <span id="agentStatusText">正在连接客服坐席...</span>
       </div>
     </div>
@@ -379,10 +379,10 @@
     const appKey = urlParams.get('appKey') || 'app_demo888';
 
     // 生成或恢复访客唯一标识
-    let visitorId = localStorage.getItem('__IBANGKF_VID__');
+    let visitorId = localStorage.getItem('__AIKEFU_VID__');
     if (!visitorId) {
       visitorId = 'v_' + Math.random().toString(36).substring(2, 9);
-      localStorage.setItem('__IBANGKF_VID__', visitorId);
+      localStorage.setItem('__AIKEFU_VID__', visitorId);
     }
 
     let assignedAgentId = null;
@@ -593,7 +593,7 @@
       }
     };
 
-    // 核心特色功能：实时打字预知 (爱邦客核心功能)
+    // 核心特色功能：实时打字预知 (AI智客服核心功能)
     // 当访客输入文字时，实时推送给客服端，无需按下发送键客服即可预览！
     chatInput.oninput = () => {
       const currentText = chatInput.value;

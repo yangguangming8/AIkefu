@@ -1,12 +1,12 @@
 @echo off
 cd /d "%~dp0"
-title iBangKF 爱邦客客服系统启动器
+title AIkefu AIkefu 客服系统启动器
 echo ========================================================
-echo    iBangKF 爱邦客在线客服系统 - 正在启动
+echo    AIkefu AIkefu 在线客服系统 - 正在启动
 echo ========================================================
 echo.
 echo [1/3] 正在启动后台服务端 (端口: 8080)...
-start "iBangKF_Server" /D "%~dp0server" cmd /k "node index.js"
+start "AIkefu_Server" /D "%~dp0server" cmd /k "node index.js"
 echo.
 echo [2/3] 等待服务就绪...
 ping 127.0.0.1 -n 3 >nul

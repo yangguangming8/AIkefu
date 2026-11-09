@@ -11,7 +11,7 @@ function createWindow() {
     height: 800,
     minWidth: 1000,
     minHeight: 650,
-    title: 'iBangKF 爱邦客在线客服工作台',
+    title: 'AIkefu AI智客服在线客服工作台',
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
       nodeIntegration: false,
@@ -42,7 +42,7 @@ function createTray() {
   );
   
   tray = new Tray(icon);
-  tray.setToolTip('iBangKF 爱邦客客服系统');
+  tray.setToolTip('AIkefu AIkefu 客服系统');
 
   const contextMenu = Menu.buildFromTemplate([
     {

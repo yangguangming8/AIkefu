@@ -1009,7 +1009,7 @@ wss.on('connection', (ws, req) => {
 
 server.listen(PORT, () => {
   console.log(`=======================================================`);
-  console.log(` 爱邦客 (iBangKF) SaaS 多租户 AI 智能客服云平台已就绪！`);
+  console.log(` AI智客服 (AIkefu) SaaS 多租户 AI 智能客服云平台已就绪！`);
   console.log(` 平台服务端地址:  http://127.0.0.1:${PORT}`);
   console.log(` SaaS企业管理后台: http://127.0.0.1:${PORT}/console/`);
   console.log(` 访客端演示页面:  http://127.0.0.1:${PORT}/demo.html`);

@@ -1,6 +1,6 @@
 @echo off
 cd /d "%~dp0server"
-title iBangKF 客服服务端
-echo [正在启动爱邦客服务端]...
+title AIkefu 客服服务端
+echo [正在启动AI智客服服务端]...
 node index.js
 pause

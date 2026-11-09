@@ -1,6 +1,6 @@
-# iBangKF (爱邦客) SaaS 多租户与 AI 在线客服云平台
+# AIkefu (智能云客服) SaaS 多租户与 AI 在线客服云平台
 
-本项目基于 **REA (Reverse Engineer Anything)** 的逆向工程与重构设计理念，对行业知名在线客服系统 **[iBangKF (爱邦客)](https://www.ibangkf.com/)** 进行了 1:1 深度复刻与现代全栈升级，并重构为面向商业化运营的 **SaaS 多租户 AI 智能在线客服云平台**。
+本项目基于 **REA (Reverse Engineer Anything)** 的系统架构与重构设计理念，对行业知名在线客服系统 **[AIkefu (智能云客服)](https://www.aikefu.com/)** 进行了 1:1 深度自研实现与现代全栈升级，并重构为面向商业化运营的 **SaaS 多租户 AI 智能在线客服云平台**。
 
 ---
 

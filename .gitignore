@@ -7,8 +7,8 @@ package-lock.json
 npm-debug.log*
 
 # Reverse engineering temporary files
-ibangkf_extracted/
-ibangkf-setup.exe
+aikefu_extracted/
+aikefu-setup.exe
 
 # System Files
 Thumbs.db

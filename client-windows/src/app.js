@@ -854,7 +854,7 @@ function renderCannedMessages() {
         agentInputBox.focus();
       };
 
-      // 双击直接发送！(爱邦客杀手级快捷操作)
+      // 双击直接发送！(AI智客服杀手级快捷操作)
       it.ondblclick = () => {
         sendAgentMessage(item.content);
       };

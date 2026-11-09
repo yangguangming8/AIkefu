@@ -199,7 +199,7 @@
 
   <script>
     function triggerOpenChat() {
-      const btn = document.getElementById('ibangkfToggleBtn') || document.getElementById('ibangkfLabelBtn');
+      const btn = document.getElementById('aikefuToggleBtn') || document.getElementById('aikefuLabelBtn');
       if (btn) {
         btn.click();
       } else {
@@ -239,7 +239,7 @@
         a.classList.toggle('active', a.innerText.indexOf(title.substring(0, 2)) !== -1);
       });
 
-      const iframe = document.getElementById('ibangkfIframe');
+      const iframe = document.getElementById('aikefuIframe');
       if (iframe && iframe.contentWindow) {
         iframe.contentWindow.postMessage({
           action: 'PAGE_NAVIGATED',
@@ -249,7 +249,7 @@
     }
   </script>
 
-  <!-- 引入爱邦客访客端挂件 (使用相对路径，兼容 http 和本地文件) -->
+  <!-- 引入AI智客服访客端挂件 (使用相对路径，兼容 http 和本地文件) -->
   <script src="widget.js"></script>
 
 </body>
